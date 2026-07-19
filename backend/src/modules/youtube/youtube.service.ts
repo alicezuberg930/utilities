@@ -14,7 +14,7 @@ export class YoutubeService {
     constructor(
         @InjectModel(Job.name) private jobModel: Model<JobDocument>,
     ) { }
-    
+
     private clients = new Map<string, Response>()
 
     async createJob(data: YoutubeDto) {
@@ -28,7 +28,7 @@ export class YoutubeService {
             await mkdir("/tmp/jobs", { recursive: true })
             const job = await this.jobModel.create({ jobId: createId(), status: 'pending', ...data })
             const extension = job.format === Format.audio ? "mp3" : "mp4"
-            const outputPath = `/tmp/jobs/${job.jobId}.${extension}`;
+            const outputPath = `/tmp/jobs/${job.jobId}.${extension}`
             this.download(job, outputPath)
             return job
         } catch (error) {
@@ -45,11 +45,11 @@ export class YoutubeService {
     }
 
     addClient(id: string, res: Response) {
-        this.clients.set(id, res);
+        this.clients.set(id, res)
     }
 
     removeClient(id: string) {
-        this.clients.delete(id);
+        this.clients.delete(id)
     }
 
     private download(job: Job, outputPath: string) {
@@ -59,7 +59,7 @@ export class YoutubeService {
                 '-x',
                 '--audio-format',
                 'mp3',
-            );
+            )
         }
         if (job.format === Format.video) {
             args.push(
@@ -67,7 +67,7 @@ export class YoutubeService {
                 'bv*+ba/b',
                 '--merge-output-format',
                 'mp4',
-            );
+            )
         }
         const process = spawn('/usr/bin/yt-dlp', [
             ...args,
@@ -100,10 +100,38 @@ export class YoutubeService {
     }
 
     getInfo(url: string) {
-        const process = spawn("/usr/bin/yt-dlp", [
-            "--dump-json",
-            url,
-        ])
-        return process
+        return new Promise((resolve, reject) => {
+            const process = spawn("/usr/bin/yt-dlp", [
+                "--dump-json",
+                url,
+            ])
+
+            let stdout = ""
+            let stderr = ""
+
+            process.stdout.on("data", (chunk) => {
+                stdout += chunk.toString()
+            })
+
+            process.stderr.on("data", (chunk) => {
+                stderr += chunk.toString()
+            })
+
+            process.on("error", (err) => {
+                reject(err)
+            })
+
+            process.on("close", (code) => {
+                if (code !== 0) {
+                    return reject(new Error(stderr))
+                }
+                try {
+                    const info = JSON.parse(stdout)
+                    resolve(info)
+                } catch (err) {
+                    reject(err)
+                }
+            })
+        })
     }
 }

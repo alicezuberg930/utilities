@@ -11,17 +11,8 @@ export class YoutubeController {
   constructor(private readonly youtubeService: YoutubeService) { }
 
   @Get('info')
-  getInfo(@Query() url: string) {
-    const process = this.youtubeService.getInfo(url)
-    let json = ""
-    process.stdout.on("data", chunk => {
-      json += chunk
-      console.log(chunk)
-    })
-    process.on("close", () => {
-      console.log(JSON.parse(json))
-      return JSON.parse(json)
-    })
+  async getInfo(@Query() query: { url: string }) {
+    return await this.youtubeService.getInfo(query.url)
   }
 
   @ResponseMessage('Job created successfully')
