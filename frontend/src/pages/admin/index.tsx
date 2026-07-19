@@ -1,0 +1,6 @@
+export { default as PostsPage } from './posts'
+export { default as LogsPage } from './logs'
+export { default as EventsPage } from './events'
+export { default as InformationPage } from './information'
+export { default as BannersPage } from './banners'
+export { default as LoginPage } from './login'

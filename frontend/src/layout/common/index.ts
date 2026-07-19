@@ -1,0 +1,1 @@
+export { default as ShimmerList } from './shimmer-list'
