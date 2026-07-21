@@ -1,7 +1,12 @@
+import type { ApiResponse, FilteredMetadata } from "@/@types"
+import { LazyLoadImage } from "@/components/lazy-load-image"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
+import { Typography } from "@/components/ui/typography"
 import { httpClient } from "@/lib/repository/http-client"
+import { formatByte } from "@/lib/utils"
 import { useEffect, useState } from "react"
 
 const HomePage = () => {
@@ -41,17 +46,42 @@ const HomePage = () => {
     //   videoQuality: "360p"
     // })
     // setId(job.data.jobId)
-    const data = await httpClient.get('/youtube/info', {
+    const data = await httpClient.get<ApiResponse<FilteredMetadata>>('/youtube/info', {
       url: "https://music.youtube.com/watch?v=mjd1CD6VSck"
     })
-    console.log(data)
+    setInfo(data.data ?? null)
   }
+  const [info, setInfo] = useState<FilteredMetadata | null>(null)
 
   return (
     <>
       <Input value={url} onChange={(e) => setUrl(e.currentTarget.value)} />
       <Button onClick={download}>Download</Button>
       <Progress value={progress} />
+      {info && (
+        <>
+          <div>
+            <LazyLoadImage alt={info.thumbnail} src={info.thumbnail} wrapperClassName="mb-2" className="rounded-md" />
+            <Typography variant={'h6'}>{info.title}</Typography>
+          </div>
+          {info.videoFormats.map(format => (
+            <Card>
+              <Typography variant={'caption'}>{format.video_ext}</Typography>
+              <Typography variant={'caption'}>{format.format}</Typography>
+              <Typography variant={'caption'}>{format.resolution}</Typography>
+              <Typography variant={'caption'}>{formatByte(format.filesize)} MB</Typography>
+            </Card>
+          ))}
+          {info.audioFormats.map(format => (
+            <Card>
+              <Typography variant={'caption'}>{format.audio_ext}</Typography>
+              <Typography variant={'caption'}>{format.format}</Typography>
+              <Typography variant={'caption'}>{format.abr} kbps</Typography>
+              <Typography variant={'caption'}>{formatByte(format.filesize)} MB</Typography>
+            </Card>
+          ))}
+        </>
+      )}
     </>
   )
 }

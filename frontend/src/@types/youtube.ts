@@ -1,31 +1,21 @@
-export type YoutubePlaylistItem = {
-  kind?: string
-  etag?: string
-  id?: string
-  snippet?: {
-    title?: string
-    description?: string
-    publishedAt?: string
-    thumbnails?: Record<string, unknown>
-    resourceId?: {
-      kind?: string
-      videoId?: string
-    }
-  }
-  contentDetails: {
-    videoId: string
-    videoPublishedAt?: string
-  }
+type YtDlpFormat = {
+  format_id: string
+  format: string
+  video_ext: string
+  audio_ext: string
+  vcodec: string
+  acodec: string
+  url: string
+  ext: string
+  resolution: string
+  filesize: number
+  abr: number
 }
 
-export type YoutubePlaylistVideosResponse = {
-  kind?: string
-  etag?: string
-  nextPageToken?: string
-  prevPageToken?: string
-  pageInfo?: {
-    totalResults: number
-    resultsPerPage: number
-  }
-  items: YoutubePlaylistItem[]
+export type FilteredMetadata = {
+  title: string;
+  thumbnail: string;
+  videoFormats: YtDlpFormat[];
+  audioFormats: YtDlpFormat[];
+  combinedFormat: string | null; // e.g. "398+251"
 }

@@ -134,4 +134,23 @@ export class YoutubeService {
             })
         })
     }
+
+    extractStreams(metadata: any) {
+        // Video-only streams (mp4 or webm video)
+        const videoFormats = metadata.formats.filter(fmt => {
+            return (fmt.video_ext === "mp4" || fmt.video_ext === "webm") && fmt.audio_ext === "none"
+        })
+        // Audio-only streams (webm or m4a audio)
+        const audioFormats = metadata.formats.filter(fmt => {
+            return (fmt.audio_ext === "webm" || fmt.audio_ext === "m4a") && fmt.video_ext === "none"
+        })
+        return {
+            title: metadata.title,
+            thumbnail: metadata.thumbnail,
+            videoFormats,
+            audioFormats,
+            combinedFormat: metadata.format_id ?? null, // "398+251"
+        }
+    }
+
 }

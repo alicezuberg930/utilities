@@ -12,7 +12,8 @@ export class YoutubeController {
 
   @Get('info')
   async getInfo(@Query() query: { url: string }) {
-    return await this.youtubeService.getInfo(query.url)
+    const info = await this.youtubeService.getInfo(query.url)
+    return this.youtubeService.extractStreams(info)
   }
 
   @ResponseMessage('Job created successfully')

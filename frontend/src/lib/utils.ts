@@ -197,4 +197,8 @@ const textToSpeech = async (text: string) => {
   }
 }
 
-export { cn, showResponseError, slugify, alpha, getPageNumbers, stripHtml, formatDuration, textToSpeech }
+const formatByte = (bytes: number): string => {
+  return (bytes / (1024 * 1024)).toFixed(2)
+}
+
+export { cn, showResponseError, slugify, alpha, getPageNumbers, stripHtml, formatDuration, textToSpeech, formatByte }
