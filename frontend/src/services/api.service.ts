@@ -23,7 +23,13 @@ import type {
     UpdateEventParams,
 } from '@/@types/event'
 import type { UploadFileParams, UploadFileResponse } from '@/@types/file'
+import type {
+    CreateYoutubeJobRequest,
+    YoutubeJobResponse,
+    YoutubeMetadataResponse,
+} from '@/@types/youtube'
 import { API } from '../lib/api'
+import { getApiUrl } from '@/lib/repository/http-client'
 
 // auth
 export const login = async (params: LoginParams) => {
@@ -76,3 +82,18 @@ export const deleteEvent = async ({ id }: DeleteEventParams) => {
 export const getEvents = async ({ filter }: GetEventsParams = {}) => {
     return httpClient.get<EventListResponse>(API.EVENTS, filter)
 }
+
+// youtube
+export const getYoutubeInfo = async (url: string) => {
+    return httpClient.get<YoutubeMetadataResponse>(API.YOUTUBE.INFO, { url })
+}
+
+export const createYoutubeJob = async (request: CreateYoutubeJobRequest) => {
+    return httpClient.post<YoutubeJobResponse>(API.YOUTUBE.JOB, request)
+}
+
+export const getYoutubeProgressUrl = (jobId: string) =>
+    getApiUrl(API.YOUTUBE.PROGRESS(jobId))
+
+export const getYoutubeFileUrl = (jobId: string) =>
+    getApiUrl(API.YOUTUBE.FILE(jobId))

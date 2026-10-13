@@ -1,4 +1,10 @@
-type YtDlpFormat = {
+import type { ApiResponse } from './api'
+
+export type YoutubeDownloadFormat = 'audio' | 'video'
+export type YoutubeAudioQuality = '128kbps' | '196kbps' | '320kbps'
+export type YoutubeVideoQuality = '360p' | '480p' | '720p' | '1080p'
+
+export type YtDlpFormat = {
   format_id: string
   format: string
   video_ext: string
@@ -7,15 +13,82 @@ type YtDlpFormat = {
   acodec: string
   url: string
   ext: string
-  resolution: string
-  filesize: number
-  abr: number
+  resolution?: string | null
+  filesize?: number | null
+  abr?: number | null
 }
 
 export type FilteredMetadata = {
-  title: string;
-  thumbnail: string;
-  videoFormats: YtDlpFormat[];
-  audioFormats: YtDlpFormat[];
-  combinedFormat: string | null; // e.g. "398+251"
+  title: string | null
+  thumbnail: string | null
+  videoFormats: YtDlpFormat[]
+  audioFormats: YtDlpFormat[]
+  combinedFormat: string | null
+}
+
+export type CreateYoutubeJobRequest = {
+  url: string
+  format: YoutubeDownloadFormat
+  audioQuality?: YoutubeAudioQuality
+  videoQuality?: YoutubeVideoQuality
+}
+
+export type YoutubeJob = {
+  jobId: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  url: string
+  audioQuality: YoutubeAudioQuality | null
+  videoQuality: YoutubeVideoQuality | null
+  format: YoutubeDownloadFormat
+  progress: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type YoutubeApiResponse<T> = Omit<ApiResponse<T>, 'data' | 'message'> & {
+  data: T
+  message?: string
+}
+
+export type YoutubeMetadataResponse = YoutubeApiResponse<FilteredMetadata>
+export type YoutubeJobResponse = YoutubeApiResponse<YoutubeJob>
+
+export type YoutubeProgressEvent = {
+  progress: number
+}
+
+export type YoutubeFailureEvent = {
+  message: string
+}
+
+export type YoutubePlaylistItem = {
+  kind?: string
+  etag?: string
+  id?: string
+  snippet?: {
+    title?: string
+    description?: string
+    publishedAt?: string
+    thumbnails?: Record<string, unknown>
+    resourceId?: {
+      kind?: string
+      videoId?: string
+    }
+  }
+  contentDetails: {
+    videoId: string
+    videoPublishedAt?: string
+  }
+}
+
+export type YoutubePlaylistVideosResponse = {
+  kind?: string
+  etag?: string
+  nextPageToken?: string
+  prevPageToken?: string
+  pageInfo?: {
+    totalResults: number
+    resultsPerPage: number
+  }
+  items: YoutubePlaylistItem[]
 }

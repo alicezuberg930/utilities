@@ -1,99 +1,109 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Utilities API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This solution is the ASP.NET Core API replacement for the NestJS YouTube module. It uses a layered Clean Architecture structure based on the C# Corner guide, adapted for an API-only service and deliberately organized by technical type rather than feature.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Structure
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```text
+backend/
+|-- Utilities.sln
+|-- src/
+|   |-- Utilities.Api/                 # HTTP controllers, filters, middleware, API configuration
+|   |   |-- Controllers/V1/
+|   |   |-- Extensions/
+|   |   |-- Filters/
+|   |   |-- Middleware/
+|   |   `-- Models/Common/
+|   |-- Utilities.Application/         # Use cases, DTOs, interfaces, validation
+|   |   |-- DTOs/Requests/
+|   |   |-- DTOs/Responses/
+|   |   |-- Exceptions/
+|   |   |-- Interfaces/
+|   |   `-- Services/
+|   |-- Utilities.Domain/              # Business entities and constants; no dependencies
+|   |   |-- Constants/
+|   |   `-- Entities/
+|   `-- Utilities.Infrastructure/      # PostgreSQL, yt-dlp, files, queues, SSE broker, worker
+|       |-- BackgroundServices/
+|       |-- Configuration/
+|       |-- Data/
+|       |   |-- Configurations/
+|       |   |-- Context/
+|       |   `-- Migrations/
+|       |-- Extensions/
+|       |-- External/Youtube/
+|       |-- Messaging/
+|       |-- Realtime/
+|       |-- Repositories/
+|       `-- Services/
+|-- Dockerfile
+`-- Dockerfile.dockerignore
 ```
 
-## Compile and run the project
+Project dependencies are enforced as follows:
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```text
+Utilities.Api ----------> Utilities.Application ----------> Utilities.Domain
+      |                                                       ^
+      `--------------> Utilities.Infrastructure -------------'
 ```
 
-## Run tests
+`Utilities.Domain` has no project dependencies. Infrastructure implements the interfaces owned by the Application layer. The API project is the composition root and contains no website, Razor Pages, MVC views, or static frontend.
 
-```bash
-# unit tests
-$ npm run test
+References:
 
-# e2e tests
-$ npm run test:e2e
+- [C# Corner structure guide](https://www.c-sharpcorner.com/article/best-practices-for-structuring-large-asp-net-projects-a-simple-guide)
+- [Common web application architectures](https://learn.microsoft.com/dotnet/architecture/modern-web-apps-azure/common-web-application-architectures)
+- [ASP.NET Core controllers](https://learn.microsoft.com/aspnet/core/web-api/?view=aspnetcore-10.0)
+- [EF Core DbContext configuration](https://learn.microsoft.com/ef/core/dbcontext-configuration/)
+- [Npgsql EF Core provider](https://www.npgsql.org/efcore/)
 
-# test coverage
-$ npm run test:cov
+## Run locally
+
+PostgreSQL and `yt-dlp` must be available. The checked-in development connection string matches the PostgreSQL service in the repository's `docker-compose.yml`.
+
+```powershell
+docker compose up -d postgres
+dotnet run --project backend/src/Utilities.Api/Utilities.Api.csproj
 ```
 
-## Deployment
+The development profile listens at `http://localhost:4000`. Development startup applies pending EF Core migrations. Production leaves automatic migration disabled by default; Docker Compose explicitly enables it for this single-instance setup.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+To build the entire solution:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g mau
-$ mau deploy
+```powershell
+dotnet build backend/Utilities.sln
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+To create or apply migrations manually:
 
-## Resources
+```powershell
+dotnet ef migrations add MigrationName --project backend/src/Utilities.Infrastructure/Utilities.Infrastructure.csproj --startup-project backend/src/Utilities.Api/Utilities.Api.csproj --output-dir Data/Migrations
+dotnet ef database update --project backend/src/Utilities.Infrastructure/Utilities.Infrastructure.csproj --startup-project backend/src/Utilities.Api/Utilities.Api.csproj
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Configuration can be overridden with standard ASP.NET Core environment variables, for example:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```text
+ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=utilities;Username=admin;Password=...
+Youtube__ExecutablePath=/usr/local/bin/yt-dlp
+Youtube__JobsDirectory=/tmp/jobs
+CORS_ORIGINS=https://example.com,https://admin.example.com
+```
 
-## Support
+## YouTube API
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- `GET /api/v1/youtube/info?url=...`
+- `POST /api/v1/youtube/job`
+- `GET /api/v1/youtube/progress/{jobId}` (server-sent events)
+- `GET /api/v1/youtube/file/{jobId}`
 
-## Stay in touch
+Example job request:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```json
+{
+  "url": "https://www.youtube.com/watch?v=...",
+  "format": "video",
+  "videoQuality": "720p"
+}
+```

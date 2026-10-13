@@ -1,0 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+using Utilities.Domain.Entities;
+
+namespace Utilities.Infrastructure.Data.Context;
+
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<YoutubeJob> YoutubeJobs => Set<YoutubeJob>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    }
+}

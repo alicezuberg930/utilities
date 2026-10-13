@@ -10,5 +10,11 @@ export const API = {
     LOGS: "/logs",
     UPLOAD_FILE: "/file/upload",
     INFORMATION: "/information",
-    EVENTS: "/events"
+    EVENTS: "/events",
+    YOUTUBE: {
+        INFO: "/youtube/info",
+        JOB: "/youtube/job",
+        PROGRESS: (jobId: string) => `/youtube/progress/${jobId}`,
+        FILE: (jobId: string) => `/youtube/file/${jobId}`,
+    },
 }

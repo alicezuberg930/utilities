@@ -4,8 +4,8 @@ import { InterceptorManager } from './interceptor'
 
 const getBaseUrl = () => {
   const environment = import.meta.env.VITE_ENVIRONMENT
-  const productionApi = import.meta.env.VITE_PRODUCTION_API
-  const developmentApi = import.meta.env.VITE_DEVELOPMENT_API
+  const productionApi = import.meta.env.VITE_PRODUCTION_API ?? '/api/v1'
+  const developmentApi = import.meta.env.VITE_DEVELOPMENT_API ?? 'http://localhost:4000/api/v1'
 
   if (environment === 'development') {
     return developmentApi
@@ -13,7 +13,7 @@ const getBaseUrl = () => {
   if (environment === 'production') {
     return productionApi
   }
-  return productionApi ?? developmentApi
+  return import.meta.env.DEV ? developmentApi : productionApi
 }
 
 const BASE_URL = getBaseUrl()
@@ -23,6 +23,8 @@ const isAbsoluteUrl = (url: string) => /^https?:\/\//i.test(url)
 const getRequestUrl = (endpoint: string) => {
   return isAbsoluteUrl(endpoint) ? endpoint : `${BASE_URL}${endpoint}`
 }
+
+export const getApiUrl = (endpoint: string) => getRequestUrl(endpoint)
 
 const getErrorMessage = (data: unknown) => {
   if (typeof data === 'string') return data || 'Request failed'
