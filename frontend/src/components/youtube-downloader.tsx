@@ -287,7 +287,7 @@ export default function YoutubeDownloader() {
                   className='w-full'
                   disabled={isBusy || !hasSelectedQuality}
                   onClick={startDownload}
-                >
+                >  
                   {status === 'creating' || status === 'downloading' ? <Spinner /> : <DownloadIcon />}
                   {status === 'creating' ? 'Creating job' : status === 'downloading' ? 'Downloading' : 'Start download'}
                 </Button>

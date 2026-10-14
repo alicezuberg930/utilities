@@ -10,7 +10,6 @@ export type YtDlpFormat = {
   audio_ext: string
   vcodec: string
   acodec: string
-  url: string
   ext: string
   resolution?: string | null
   filesize?: number | null

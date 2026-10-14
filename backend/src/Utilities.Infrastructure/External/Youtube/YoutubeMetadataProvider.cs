@@ -15,6 +15,7 @@ public sealed class YoutubeMetadataProvider(
 {
     private readonly YoutubeOptions _options = options.Value;
 
+
     public async Task<YoutubeMetadataResponse> GetInfoAsync(string url, CancellationToken cancellationToken)
     {
         using var process = CreateProcess("--dump-json", url);
@@ -90,17 +91,39 @@ public sealed class YoutubeMetadataProvider(
 
                 if ((videoExtension is "mp4" or "webm") && audioExtension == "none")
                 {
-                    videoFormats.Add(format.Clone());
+                    videoFormats.Add(CloneWithoutUrl(format));
                 }
 
                 if ((audioExtension is "webm" or "m4a") && videoExtension == "none")
                 {
-                    audioFormats.Add(format.Clone());
+                    audioFormats.Add(CloneWithoutUrl(format));
                 }
             }
         }
 
         return new YoutubeMetadataResponse(GetString(metadata, "title"), GetString(metadata, "thumbnail"), videoFormats, audioFormats, GetString(metadata, "format_id"));
+    }
+
+    private static JsonElement CloneWithoutUrl(JsonElement format)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+
+            foreach (var property in format.EnumerateObject())
+            {
+                if (!property.NameEquals("url"))
+                {
+                    property.WriteTo(writer);
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
+        using var document = JsonDocument.Parse(stream.ToArray());
+        return document.RootElement.Clone();
     }
 
     private static string? GetString(JsonElement element, string propertyName) => element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String ? property.GetString() : null;

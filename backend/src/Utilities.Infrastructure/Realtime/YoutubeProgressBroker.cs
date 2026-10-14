@@ -19,8 +19,7 @@ public sealed class YoutubeProgressBroker : IYoutubeProgressStream, IYoutubeProg
         return new YoutubeProgressSubscription(channel.Reader, () => Remove(jobId, subscriberId));
     }
 
-    public void PublishProgress(Guid jobId, double progress) =>
-        Publish(jobId, new YoutubeProgressEvent(null, new YoutubeProgress(progress)));
+    public void PublishProgress(Guid jobId, double progress) => Publish(jobId, new YoutubeProgressEvent(null, new YoutubeProgress(progress)));
 
     public void Complete(Guid jobId)
     {
@@ -65,12 +64,9 @@ public sealed class YoutubeProgressBroker : IYoutubeProgressStream, IYoutubeProg
         }
     }
 
-    private sealed class YoutubeProgressSubscription(
-        ChannelReader<YoutubeProgressEvent> reader,
-        Action unsubscribe) : IYoutubeProgressSubscription
+    private sealed class YoutubeProgressSubscription(ChannelReader<YoutubeProgressEvent> reader, Action unsubscribe) : IYoutubeProgressSubscription
     {
-        public IAsyncEnumerable<YoutubeProgressEvent> ReadAllAsync(CancellationToken cancellationToken) =>
-            reader.ReadAllAsync(cancellationToken);
+        public IAsyncEnumerable<YoutubeProgressEvent> ReadAllAsync(CancellationToken cancellationToken) => reader.ReadAllAsync(cancellationToken);
 
         public void Dispose() => unsubscribe();
     }
