@@ -81,6 +81,8 @@ public sealed partial class YoutubeDownloader(
 
         if (job.Format == YoutubeFormats.Audio)
         {
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add(BuildAudioFormatSelector(job.AudioQuality));
             startInfo.ArgumentList.Add("-x");
             startInfo.ArgumentList.Add("--audio-format");
             startInfo.ArgumentList.Add("mp3");
@@ -88,7 +90,7 @@ public sealed partial class YoutubeDownloader(
         else
         {
             startInfo.ArgumentList.Add("-f");
-            startInfo.ArgumentList.Add("bv*+ba/b");
+            startInfo.ArgumentList.Add(BuildVideoFormatSelector(job.VideoQuality));
             startInfo.ArgumentList.Add("--merge-output-format");
             startInfo.ArgumentList.Add("mp4");
         }
@@ -99,6 +101,31 @@ public sealed partial class YoutubeDownloader(
         startInfo.ArgumentList.Add(job.Url);
 
         return new Process { StartInfo = startInfo };
+    }
+
+    private static string BuildAudioFormatSelector(double? audioQuality)
+    {
+        if (audioQuality is null || !double.IsFinite(audioQuality.Value) || audioQuality <= 0)
+        {
+            throw new InvalidOperationException($"Unsupported audio quality '{audioQuality}'.");
+        }
+
+        var bitrate = audioQuality.Value.ToString("R", CultureInfo.InvariantCulture);
+        return $"ba[abr<={bitrate}]";
+    }
+
+    private static string BuildVideoFormatSelector(string? videoQuality)
+    {
+        var height = videoQuality switch
+        {
+            "360p" => 360,
+            "480p" => 480,
+            "720p" => 720,
+            "1080p" => 1080,
+            _ => throw new InvalidOperationException($"Unsupported video quality '{videoQuality}'."),
+        };
+
+        return $"bv*[height<={height}][ext=mp4]+ba[ext=m4a]/b[height<={height}][ext=mp4]";
     }
 
     private static void HandleOutput(string? output, Action<double> reportProgress)

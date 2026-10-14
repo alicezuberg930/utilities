@@ -61,6 +61,7 @@ References:
 ## Run locally
 
 PostgreSQL and `yt-dlp` must be available. The checked-in development connection string matches the PostgreSQL service in the repository's `docker-compose.yml`.
+On Windows, the Development configuration resolves `programs/yt-dlp.exe` from the repository automatically, so it does not need to be added to `PATH`.
 
 ```powershell
 docker compose up -d postgres

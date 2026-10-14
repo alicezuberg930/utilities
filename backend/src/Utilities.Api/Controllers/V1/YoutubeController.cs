@@ -11,32 +11,23 @@ namespace Utilities.Api.Controllers.V1;
 
 [ApiController]
 [Route("api/v1/youtube")]
-public sealed class YoutubeController(
-    IYoutubeService youtubeService,
-    IYoutubeProgressStream progressStream) : ControllerBase
+public sealed class YoutubeController(IYoutubeService youtubeService, IYoutubeProgressStream progressStream) : ControllerBase
 {
     private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web);
 
     [HttpGet("info")]
-    public Task<YoutubeMetadataResponse> GetInfoAsync(
-        [FromQuery] string? url,
-        CancellationToken cancellationToken) =>
-        youtubeService.GetInfoAsync(url, cancellationToken);
+    public Task<YoutubeMetadataResponse> GetInfoAsync([FromQuery] string? url, CancellationToken cancellationToken) => youtubeService.GetInfoAsync(url, cancellationToken);
 
     [HttpPost("job")]
     [ResponseEnvelope(StatusCodes.Status201Created, "Job created successfully")]
-    public Task<YoutubeJobResponse> CreateJobAsync(
-        [FromBody] CreateYoutubeJobRequest request,
-        CancellationToken cancellationToken) =>
-        youtubeService.CreateJobAsync(request, cancellationToken);
+    public Task<YoutubeJobResponse> CreateJobAsync([FromBody] CreateYoutubeJobRequest request, CancellationToken cancellationToken) => youtubeService.CreateJobAsync(request, cancellationToken);
 
     [HttpGet("progress/{jobId:guid}")]
     [SkipResponseEnvelope]
     public async Task StreamProgressAsync(Guid jobId, CancellationToken cancellationToken)
     {
         using var subscription = progressStream.Subscribe(jobId);
-        var job = await youtubeService.GetJobStateAsync(jobId, cancellationToken)
-            ?? throw new ResourceNotFoundException("YouTube job was not found.");
+        var job = await youtubeService.GetJobStateAsync(jobId, cancellationToken) ?? throw new ResourceNotFoundException("YouTube job was not found.");
 
         Response.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-cache";
@@ -44,9 +35,7 @@ public sealed class YoutubeController(
         HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
         await Response.StartAsync(cancellationToken);
-        await WriteEventAsync(
-            new YoutubeProgressEvent(null, new YoutubeProgress(job.Progress)),
-            cancellationToken);
+        await WriteEventAsync(new YoutubeProgressEvent(null, new YoutubeProgress(job.Progress)), cancellationToken);
 
         if (job.IsCompleted)
         {
@@ -56,11 +45,7 @@ public sealed class YoutubeController(
 
         if (job.IsFailed)
         {
-            await WriteEventAsync(
-                new YoutubeProgressEvent(
-                    "error",
-                    new YoutubeFailure(job.Error ?? "The download failed.")),
-                cancellationToken);
+            await WriteEventAsync(new YoutubeProgressEvent("error", new YoutubeFailure(job.Error ?? "The download failed.")), cancellationToken);
             return;
         }
 

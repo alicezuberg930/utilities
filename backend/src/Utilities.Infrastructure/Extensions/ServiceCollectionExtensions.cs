@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Utilities.Application.Interfaces;
 using Utilities.Infrastructure.BackgroundServices;
 using Utilities.Infrastructure.Configuration;
@@ -15,12 +16,27 @@ namespace Utilities.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         var postgresConnection = configuration.GetConnectionString("Postgres") ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(postgresConnection));
-        services.Configure<YoutubeOptions>(configuration.GetSection(YoutubeOptions.SectionName));
+        services
+            .AddOptions<YoutubeOptions>()
+            .Bind(configuration.GetSection(YoutubeOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                if (!Path.IsPathFullyQualified(options.ExecutablePath) &&
+                    (options.ExecutablePath.Contains(Path.DirectorySeparatorChar) ||
+                     options.ExecutablePath.Contains(Path.AltDirectorySeparatorChar)))
+                {
+                    options.ExecutablePath = Path.GetFullPath(
+                        Path.Combine(environment.ContentRootPath, options.ExecutablePath));
+                }
+            });
 
         services.AddScoped<IYoutubeJobRepository, YoutubeJobRepository>();
         services.AddScoped<IYoutubeMetadataProvider, YoutubeMetadataProvider>();

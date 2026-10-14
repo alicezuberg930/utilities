@@ -22,13 +22,6 @@ public static class YoutubeJobStatuses
 
 public static class YoutubeQualities
 {
-    public static readonly IReadOnlySet<string> Audio = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "128kbps",
-        "196kbps",
-        "320kbps",
-    };
-
     public static readonly IReadOnlySet<string> Video = new HashSet<string>(StringComparer.Ordinal)
     {
         "360p",

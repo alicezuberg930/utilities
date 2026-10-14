@@ -1,7 +1,6 @@
 import type { ApiResponse } from './api'
 
 export type YoutubeDownloadFormat = 'audio' | 'video'
-export type YoutubeAudioQuality = '128kbps' | '196kbps' | '320kbps'
 export type YoutubeVideoQuality = '360p' | '480p' | '720p' | '1080p'
 
 export type YtDlpFormat = {
@@ -29,7 +28,7 @@ export type FilteredMetadata = {
 export type CreateYoutubeJobRequest = {
   url: string
   format: YoutubeDownloadFormat
-  audioQuality?: YoutubeAudioQuality
+  audioQuality?: number
   videoQuality?: YoutubeVideoQuality
 }
 
@@ -37,7 +36,7 @@ export type YoutubeJob = {
   jobId: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   url: string
-  audioQuality: YoutubeAudioQuality | null
+  audioQuality: number | null
   videoQuality: YoutubeVideoQuality | null
   format: YoutubeDownloadFormat
   progress: number

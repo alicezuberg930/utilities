@@ -6,7 +6,7 @@ public sealed record YoutubeJobResponse(
     Guid JobId,
     string Status,
     string Url,
-    string? AudioQuality,
+    double? AudioQuality,
     string? VideoQuality,
     string Format,
     double Progress,

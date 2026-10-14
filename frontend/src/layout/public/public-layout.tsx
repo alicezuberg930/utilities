@@ -1,6 +1,5 @@
 import { Outlet } from '@tanstack/react-router'
 import { Toaster } from '@/components/ui/sonner'
-import Footer from '@/layout/public/footer'
 import Header from '@/layout/public/header'
 import { memo } from 'react'
 
@@ -15,7 +14,6 @@ const PublicLayout = () => {
               <div className='max-w-7xl mx-auto px-3 lg:px-0'>
                 <Outlet />
               </div>
-              <Footer />
             </div>
           </div>
         </div>

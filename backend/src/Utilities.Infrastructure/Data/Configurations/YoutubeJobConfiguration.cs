@@ -16,7 +16,7 @@ public sealed class YoutubeJobConfiguration : IEntityTypeConfiguration<YoutubeJo
                 "status IN ('pending', 'running', 'completed', 'failed')");
             table.HasCheckConstraint(
                 "ck_youtube_jobs_audio_quality",
-                "audio_quality IS NULL OR audio_quality IN ('128kbps', '196kbps', '320kbps')");
+                "audio_quality IS NULL OR audio_quality > 0");
             table.HasCheckConstraint(
                 "ck_youtube_jobs_video_quality",
                 "video_quality IS NULL OR video_quality IN ('360p', '480p', '720p', '1080p')");
@@ -28,7 +28,7 @@ public sealed class YoutubeJobConfiguration : IEntityTypeConfiguration<YoutubeJo
         builder.Property(job => job.JobId).HasColumnName("job_id").ValueGeneratedNever();
         builder.Property(job => job.Status).HasColumnName("status").HasMaxLength(16).IsRequired();
         builder.Property(job => job.Url).HasColumnName("url").IsRequired();
-        builder.Property(job => job.AudioQuality).HasColumnName("audio_quality").HasMaxLength(16);
+        builder.Property(job => job.AudioQuality).HasColumnName("audio_quality");
         builder.Property(job => job.VideoQuality).HasColumnName("video_quality").HasMaxLength(16);
         builder.Property(job => job.Format).HasColumnName("format").HasMaxLength(8).IsRequired();
         builder.Property(job => job.Progress).HasColumnName("progress").HasDefaultValue(0d);

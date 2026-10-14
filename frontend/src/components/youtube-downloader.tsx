@@ -1,41 +1,22 @@
-import type {
-  FilteredMetadata,
-  YoutubeAudioQuality,
-  YoutubeDownloadFormat,
-  YoutubeFailureEvent,
-  YoutubeProgressEvent,
-  YoutubeVideoQuality,
-} from '@/@types/youtube'
+import type { FilteredMetadata, YoutubeDownloadFormat, YoutubeFailureEvent, YoutubeProgressEvent, YoutubeVideoQuality } from '@/@types/youtube'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Progress, ProgressLabel } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  createYoutubeJob,
-  getYoutubeFileUrl,
-  getYoutubeInfo,
-  getYoutubeProgressUrl,
-} from '@/services/api.service'
-import {
-  AlertCircleIcon,
-  CheckCircle2Icon,
-  DownloadIcon,
-  MusicIcon,
-  SearchIcon,
-  VideoIcon,
-} from 'lucide-react'
+import { createYoutubeJob, getYoutubeFileUrl, getYoutubeInfo, getYoutubeProgressUrl } from '@/services/api.service'
+import { AlertCircleIcon, CheckCircle2Icon, DownloadIcon, MusicIcon, SearchIcon, VideoIcon } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 
-const AUDIO_QUALITIES: YoutubeAudioQuality[] = ['128kbps', '196kbps', '320kbps']
 const VIDEO_QUALITIES: YoutubeVideoQuality[] = ['360p', '480p', '720p', '1080p']
+
+const getAvailableAudioBitrates = (metadata: FilteredMetadata) => ([
+  ...new Set(metadata.audioFormats
+    .map(audioFormat => audioFormat.abr)
+    .filter((abr): abr is number => typeof abr === 'number' && Number.isFinite(abr) && abr > 0)
+  )
+].sort((left, right) => left - right))
 
 type DownloadStatus =
   | 'idle'
@@ -45,9 +26,6 @@ type DownloadStatus =
   | 'downloading'
   | 'completed'
   | 'failed'
-
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : 'The request failed. Please try again.'
 
 const parseEvent = <T,>(event: MessageEvent<string>): T | null => {
   try {
@@ -70,7 +48,7 @@ export default function YoutubeDownloader() {
   const [url, setUrl] = useState('')
   const [metadata, setMetadata] = useState<FilteredMetadata | null>(null)
   const [format, setFormat] = useState<YoutubeDownloadFormat>('video')
-  const [audioQuality, setAudioQuality] = useState<YoutubeAudioQuality>('320kbps')
+  const [audioQuality, setAudioQuality] = useState<number | null>(null)
   const [videoQuality, setVideoQuality] = useState<YoutubeVideoQuality>('720p')
   const [status, setStatus] = useState<DownloadStatus>('idle')
   const [progress, setProgress] = useState(0)
@@ -103,10 +81,12 @@ export default function YoutubeDownloader() {
 
     try {
       const response = await getYoutubeInfo(normalizedUrl)
+      const audioBitrates = getAvailableAudioBitrates(response.data)
       setMetadata(response.data)
+      setAudioQuality(audioBitrates.at(-1) ?? null)
       setStatus('ready')
     } catch (requestError) {
-      setError(getErrorMessage(requestError))
+      setError(requestError instanceof Error ? requestError.message : 'The request failed. Please try again.')
       setStatus('failed')
     }
   }
@@ -115,9 +95,7 @@ export default function YoutubeDownloader() {
     closeProgressStream()
     terminalEventRef.current = false
 
-    const eventSource = new EventSource(getYoutubeProgressUrl(createdJobId), {
-      withCredentials: true,
-    })
+    const eventSource = new EventSource(getYoutubeProgressUrl(createdJobId), { withCredentials: true })
     eventSourceRef.current = eventSource
 
     eventSource.onmessage = (event) => {
@@ -159,6 +137,7 @@ export default function YoutubeDownloader() {
 
   const startDownload = async () => {
     if (!metadata) return
+    if (format === 'audio' && audioQuality === null) return
 
     setError(null)
     setProgress(0)
@@ -169,42 +148,33 @@ export default function YoutubeDownloader() {
         url: url.trim(),
         format,
         ...(format === 'audio'
-          ? { audioQuality }
+          ? { audioQuality: audioQuality ?? undefined }
           : { videoQuality }),
       })
-
       setJobId(response.data.jobId)
       setStatus('downloading')
       monitorJob(response.data.jobId)
     } catch (requestError) {
-      setError(getErrorMessage(requestError))
+      setError(requestError instanceof Error ? requestError.message : 'The request failed. Please try again.')
       setStatus('failed')
     }
   }
 
   const isBusy = status === 'inspecting' || status === 'creating' || status === 'downloading'
-  const activeQualities = format === 'audio' ? AUDIO_QUALITIES : VIDEO_QUALITIES
-  const selectedQuality = format === 'audio' ? audioQuality : videoQuality
-
-  const selectQuality = (quality: YoutubeAudioQuality | YoutubeVideoQuality) => {
-    if (format === 'audio') {
-      setAudioQuality(quality as YoutubeAudioQuality)
-    } else {
-      setVideoQuality(quality as YoutubeVideoQuality)
-    }
-  }
+  const audioBitrates = metadata ? getAvailableAudioBitrates(metadata) : []
+  const hasSelectedQuality = format === 'video' || audioQuality !== null
 
   return (
-    <section className='mx-auto w-full max-w-4xl py-8 md:py-14'>
-      <Card className='gap-6 p-1 shadow-sm'>
-        <CardHeader className='gap-2 border-b pb-5'>
-          <CardTitle className='text-2xl'>YouTube downloader</CardTitle>
+    <section className='mx-auto w-full max-w-6xl py-8 md:py-14'>
+      <Card className='shadow-sm'>
+        <CardHeader>
+          <CardTitle className='text-xl'>YouTube downloader</CardTitle>
           <CardDescription>
             Inspect a public YouTube link, choose an output format, and download the processed file.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className='space-y-6 pb-5'>
+        <CardContent className='space-y-6'>
           <form className='flex flex-col gap-3 sm:flex-row' onSubmit={inspectUrl}>
             <Input
               type='url'
@@ -287,13 +257,23 @@ export default function YoutubeDownloader() {
                 <div className='space-y-2'>
                   <p className='text-sm font-medium'>Quality</p>
                   <div className='flex flex-wrap gap-2'>
-                    {activeQualities.map((quality) => (
+                    {format === 'audio' ? audioBitrates.map((bitrate) => (
+                      <Button
+                        key={bitrate}
+                        type='button'
+                        variant={audioQuality === bitrate ? 'secondary' : 'outline'}
+                        disabled={isBusy}
+                        onClick={() => setAudioQuality(bitrate)}
+                      >
+                        {`${Number(bitrate.toFixed(3))} kbps`}
+                      </Button>
+                    )) : VIDEO_QUALITIES.map((quality) => (
                       <Button
                         key={quality}
                         type='button'
-                        variant={selectedQuality === quality ? 'secondary' : 'outline'}
+                        variant={videoQuality === quality ? 'secondary' : 'outline'}
                         disabled={isBusy}
-                        onClick={() => selectQuality(quality)}
+                        onClick={() => setVideoQuality(quality)}
                       >
                         {quality}
                       </Button>
@@ -305,7 +285,7 @@ export default function YoutubeDownloader() {
                   type='button'
                   size='lg'
                   className='w-full'
-                  disabled={isBusy}
+                  disabled={isBusy || !hasSelectedQuality}
                   onClick={startDownload}
                 >
                   {status === 'creating' || status === 'downloading' ? <Spinner /> : <DownloadIcon />}

@@ -19,9 +19,7 @@ public sealed class YoutubeService(
         return metadataProvider.GetInfoAsync(url!, cancellationToken);
     }
 
-    public async Task<YoutubeJobResponse> CreateJobAsync(
-        CreateYoutubeJobRequest request,
-        CancellationToken cancellationToken)
+    public async Task<YoutubeJobResponse> CreateJobAsync(CreateYoutubeJobRequest request, CancellationToken cancellationToken)
     {
         ValidateRequest(request);
 
@@ -57,12 +55,9 @@ public sealed class YoutubeService(
                 job.Error);
     }
 
-    public async Task<YoutubeDownloadFile> GetDownloadFileAsync(
-        Guid jobId,
-        CancellationToken cancellationToken)
+    public async Task<YoutubeDownloadFile> GetDownloadFileAsync(Guid jobId, CancellationToken cancellationToken)
     {
-        var job = await jobRepository.FindAsync(jobId, cancellationToken)
-            ?? throw new ResourceNotFoundException("YouTube job was not found.");
+        var job = await jobRepository.FindAsync(jobId, cancellationToken) ?? throw new ResourceNotFoundException("YouTube job was not found.");
 
         if (job.Status != YoutubeJobStatuses.Completed)
         {
@@ -76,10 +71,7 @@ public sealed class YoutubeService(
         }
 
         var isAudio = job.Format == YoutubeFormats.Audio;
-        return new YoutubeDownloadFile(
-            path,
-            isAudio ? "audio/mpeg" : "video/mp4",
-            $"{job.JobId:N}.{(isAudio ? "mp3" : "mp4")}");
+        return new YoutubeDownloadFile(path, isAudio ? "audio/mpeg" : "video/mp4", $"{job.JobId:N}.{(isAudio ? "mp3" : "mp4")}");
     }
 
     private static void ValidateRequest(CreateYoutubeJobRequest request)
@@ -91,7 +83,7 @@ public sealed class YoutubeService(
             throw new RequestValidationException("Format is invalid");
         }
 
-        if (request.AudioQuality is not null && !YoutubeQualities.Audio.Contains(request.AudioQuality))
+        if (request.AudioQuality is not null && (!double.IsFinite(request.AudioQuality.Value) || request.AudioQuality <= 0))
         {
             throw new RequestValidationException("Audio quality is invalid");
         }
@@ -101,14 +93,12 @@ public sealed class YoutubeService(
             throw new RequestValidationException("Video quality is invalid");
         }
 
-        if (request.Format == YoutubeFormats.Audio &&
-            (request.AudioQuality is null || !YoutubeQualities.Audio.Contains(request.AudioQuality)))
+        if (request.Format == YoutubeFormats.Audio && request.AudioQuality is null)
         {
             throw new RequestValidationException("Audio format should only have audio quality");
         }
 
-        if (request.Format == YoutubeFormats.Video &&
-            (request.VideoQuality is null || !YoutubeQualities.Video.Contains(request.VideoQuality)))
+        if (request.Format == YoutubeFormats.Video && (request.VideoQuality is null || !YoutubeQualities.Video.Contains(request.VideoQuality)))
         {
             throw new RequestValidationException("Video format should only have video quality");
         }
@@ -121,8 +111,7 @@ public sealed class YoutubeService(
             throw new RequestValidationException("Youtube URL cannot be empty");
         }
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             throw new RequestValidationException("Youtube URL is invalid");
         }

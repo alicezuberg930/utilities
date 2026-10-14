@@ -25,10 +25,7 @@ public sealed class YoutubeMetadataProvider(
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             logger.LogError(exception, "Could not start yt-dlp at {ExecutablePath}", _options.ExecutablePath);
-            throw new ExternalServiceException(
-                "The YouTube downloader is not available.",
-                ExternalServiceFailure.Unavailable,
-                exception);
+            throw new ExternalServiceException("The YouTube downloader is not available.", ExternalServiceFailure.Unavailable, exception);
         }
 
         using var cancellationRegistration = cancellationToken.Register(() => TryKill(process));
@@ -41,10 +38,7 @@ public sealed class YoutubeMetadataProvider(
 
         if (process.ExitCode != 0)
         {
-            logger.LogWarning(
-                "yt-dlp metadata request failed with exit code {ExitCode}: {Error}",
-                process.ExitCode,
-                stderr);
+            logger.LogWarning("yt-dlp metadata request failed with exit code {ExitCode}: {Error}", process.ExitCode, stderr);
             throw new RequestValidationException("Unable to read metadata from the supplied YouTube URL.");
         }
 
@@ -106,18 +100,10 @@ public sealed class YoutubeMetadataProvider(
             }
         }
 
-        return new YoutubeMetadataResponse(
-            GetString(metadata, "title"),
-            GetString(metadata, "thumbnail"),
-            videoFormats,
-            audioFormats,
-            GetString(metadata, "format_id"));
+        return new YoutubeMetadataResponse(GetString(metadata, "title"), GetString(metadata, "thumbnail"), videoFormats, audioFormats, GetString(metadata, "format_id"));
     }
 
-    private static string? GetString(JsonElement element, string propertyName) =>
-        element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
-            ? property.GetString()
-            : null;
+    private static string? GetString(JsonElement element, string propertyName) => element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String ? property.GetString() : null;
 
     private static void TryKill(Process process)
     {
