@@ -12,7 +12,7 @@ public static class YoutubeFormats
     };
 }
 
-public static class YoutubeJobStatuses
+public static class JobStatuses
 {
     public const string Pending = "pending";
     public const string Running = "running";

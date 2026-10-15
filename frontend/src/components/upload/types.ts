@@ -7,6 +7,7 @@ export interface CustomFile extends File {
 }
 
 export interface UploadProps extends DropzoneOptions {
+  className?: string
   error?: boolean
   thumbnail?: boolean
   placeholder?: React.ReactNode

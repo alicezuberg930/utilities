@@ -13,6 +13,9 @@ services:
   #     Database__MigrateOnStartup: "true"
   #     Youtube__ExecutablePath: /usr/local/bin/yt-dlp
   #     Youtube__JobsDirectory: /tmp/jobs
+  #     FileConversion__FfmpegExecutablePath: /usr/bin/ffmpeg
+  #     FileConversion__FfprobeExecutablePath: /usr/bin/ffprobe
+  #     FileConversion__JobsDirectory: /tmp/convert-jobs
 
   #   depends_on:
   #     postgres:
@@ -22,6 +25,7 @@ services:
 
   #   volumes:
   #     - youtube-jobs:/tmp/jobs
+  #     - convert-jobs:/tmp/convert-jobs
 
   #   networks:
   #     - app-net
@@ -51,7 +55,7 @@ services:
       retries: 10
 
     networks:
-      - app-net
+      - app-utilities
 
   redis:
     image: redis:7-alpine
@@ -72,13 +76,14 @@ services:
       retries: 5
 
     networks:
-      - app-net
+      - app-utilities
 
 volumes:
   postgres-data:
   redis-data:
   youtube-jobs:
+  convert-jobs:
 
 networks:
-  app-net:
-    name: app-net
+  app-utilities:
+    name: app-utilities

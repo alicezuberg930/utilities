@@ -1,3 +1,3 @@
 namespace Utilities.Application.DTOs.Responses;
 
-public sealed record YoutubeDownloadFile(string Path, string ContentType, string FileName);
+public sealed record JobDownloadFile(string Path, string ContentType, string FileName);

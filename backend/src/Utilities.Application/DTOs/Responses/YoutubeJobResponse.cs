@@ -13,14 +13,14 @@ public sealed record YoutubeJobResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {
-    public static YoutubeJobResponse FromEntity(YoutubeJob job) => new(
-        job.JobId,
-        job.Status,
-        job.Url,
-        job.AudioQuality,
-        job.VideoQuality,
-        job.Format,
-        job.Progress,
-        job.CreatedAt,
-        job.UpdatedAt);
+    public static YoutubeJobResponse FromEntity(YoutubeTask task) => new(
+        task.JobId,
+        task.Status,
+        task.Url,
+        task.AudioQuality,
+        task.VideoQuality,
+        task.Format,
+        task.Job.Progress,
+        task.Job.CreatedAt,
+        task.Job.UpdatedAt);
 }

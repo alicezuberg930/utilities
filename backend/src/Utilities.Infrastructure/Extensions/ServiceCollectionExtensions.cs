@@ -6,6 +6,7 @@ using Utilities.Application.Interfaces;
 using Utilities.Infrastructure.BackgroundServices;
 using Utilities.Infrastructure.Configuration;
 using Utilities.Infrastructure.Data.Context;
+using Utilities.Infrastructure.External.Conversion;
 using Utilities.Infrastructure.External.Youtube;
 using Utilities.Infrastructure.Messaging;
 using Utilities.Infrastructure.Realtime;
@@ -37,21 +38,52 @@ public static class ServiceCollectionExtensions
                         Path.Combine(environment.ContentRootPath, options.ExecutablePath));
                 }
             });
+        services
+            .AddOptions<FileConversionOptions>()
+            .Bind(configuration.GetSection(FileConversionOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                options.FfmpegExecutablePath = ResolveExecutablePath(
+                    options.FfmpegExecutablePath,
+                    environment.ContentRootPath);
+                options.FfprobeExecutablePath = ResolveExecutablePath(
+                    options.FfprobeExecutablePath,
+                    environment.ContentRootPath);
+                if (!Path.IsPathFullyQualified(options.JobsDirectory))
+                {
+                    options.JobsDirectory = Path.GetFullPath(
+                        Path.Combine(environment.ContentRootPath, options.JobsDirectory));
+                }
+            });
 
-        services.AddScoped<IYoutubeJobRepository, YoutubeJobRepository>();
+        services.AddScoped<IYoutubeTaskRepository, YoutubeTaskRepository>();
+        services.AddScoped<IConvertTaskRepository, ConvertTaskRepository>();
         services.AddScoped<IYoutubeMetadataProvider, YoutubeMetadataProvider>();
         services.AddSingleton<IYoutubeFileStorage, YoutubeFileStorage>();
+        services.AddSingleton<IFileConversionStorage, FileConversionStorage>();
 
         services.AddSingleton<YoutubeDownloadQueue>();
         services.AddSingleton<IYoutubeDownloadQueue>(provider => provider.GetRequiredService<YoutubeDownloadQueue>());
+        services.AddSingleton<FileConversionQueue>();
+        services.AddSingleton<IFileConversionQueue>(provider => provider.GetRequiredService<FileConversionQueue>());
 
-        services.AddSingleton<YoutubeProgressBroker>();
-        services.AddSingleton<IYoutubeProgressStream>(provider => provider.GetRequiredService<YoutubeProgressBroker>());
-        services.AddSingleton<IYoutubeProgressPublisher>(provider => provider.GetRequiredService<YoutubeProgressBroker>());
+        services.AddSingleton<JobProgressBroker>();
+        services.AddSingleton<IYoutubeProgressStream>(provider => provider.GetRequiredService<JobProgressBroker>());
+        services.AddSingleton<IFileProgressStream>(provider => provider.GetRequiredService<JobProgressBroker>());
+        services.AddSingleton<IJobProgressPublisher>(provider => provider.GetRequiredService<JobProgressBroker>());
 
         services.AddSingleton<YoutubeDownloader>();
+        services.AddSingleton<FileConverter>();
         services.AddHostedService<YoutubeDownloadWorker>();
+        services.AddHostedService<FileConversionWorker>();
 
         return services;
     }
+
+    private static string ResolveExecutablePath(string executablePath, string contentRootPath) =>
+        !Path.IsPathFullyQualified(executablePath) &&
+        (executablePath.Contains(Path.DirectorySeparatorChar) ||
+         executablePath.Contains(Path.AltDirectorySeparatorChar))
+            ? Path.GetFullPath(Path.Combine(contentRootPath, executablePath))
+            : executablePath;
 }

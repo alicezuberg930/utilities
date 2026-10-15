@@ -8,7 +8,7 @@ using Utilities.Domain.Entities;
 namespace Utilities.Application.Services;
 
 public sealed class YoutubeService(
-    IYoutubeJobRepository jobRepository,
+    IYoutubeTaskRepository taskRepository,
     IYoutubeMetadataProvider metadataProvider,
     IYoutubeDownloadQueue downloadQueue,
     IYoutubeFileStorage fileStorage) : IYoutubeService
@@ -24,54 +24,59 @@ public sealed class YoutubeService(
         ValidateRequest(request);
 
         var now = DateTimeOffset.UtcNow;
-        var job = new YoutubeJob
+        var job = new Job
         {
             JobId = Guid.CreateVersion7(),
-            Status = YoutubeJobStatuses.Pending,
-            Url = request.Url,
-            AudioQuality = request.AudioQuality,
-            VideoQuality = request.VideoQuality,
-            Format = request.Format,
             Progress = 0,
             CreatedAt = now,
             UpdatedAt = now,
         };
+        var task = new YoutubeTask
+        {
+            JobId = job.JobId,
+            Job = job,
+            Status = JobStatuses.Pending,
+            Url = request.Url,
+            AudioQuality = request.AudioQuality,
+            VideoQuality = request.VideoQuality,
+            Format = request.Format,
+        };
 
-        await jobRepository.AddAsync(job, cancellationToken);
+        await taskRepository.AddAsync(task, cancellationToken);
         await downloadQueue.QueueAsync(job.JobId, cancellationToken);
 
-        return YoutubeJobResponse.FromEntity(job);
+        return YoutubeJobResponse.FromEntity(task);
     }
 
-    public async Task<YoutubeJobState?> GetJobStateAsync(Guid jobId, CancellationToken cancellationToken)
+    public async Task<JobState?> GetJobStateAsync(Guid jobId, CancellationToken cancellationToken)
     {
-        var job = await jobRepository.FindAsync(jobId, cancellationToken);
-        return job is null
+        var task = await taskRepository.FindAsync(jobId, cancellationToken);
+        return task is null
             ? null
-            : new YoutubeJobState(
-                job.Progress,
-                job.Status == YoutubeJobStatuses.Completed,
-                job.Status == YoutubeJobStatuses.Failed,
-                job.Error);
+            : new JobState(
+                task.Job.Progress,
+                task.Status == JobStatuses.Completed,
+                task.Status == JobStatuses.Failed,
+                task.Job.Error);
     }
 
-    public async Task<YoutubeDownloadFile> GetDownloadFileAsync(Guid jobId, CancellationToken cancellationToken)
+    public async Task<JobDownloadFile> GetDownloadFileAsync(Guid jobId, CancellationToken cancellationToken)
     {
-        var job = await jobRepository.FindAsync(jobId, cancellationToken) ?? throw new ResourceNotFoundException("YouTube job was not found.");
+        var task = await taskRepository.FindAsync(jobId, cancellationToken) ?? throw new ResourceNotFoundException("YouTube job was not found.");
 
-        if (job.Status != YoutubeJobStatuses.Completed)
+        if (task.Status != JobStatuses.Completed)
         {
             throw new ResourceConflictException("The YouTube download is not complete.");
         }
 
-        var path = fileStorage.GetOutputPath(job);
+        var path = fileStorage.GetOutputPath(task);
         if (!fileStorage.Exists(path))
         {
             throw new ResourceNotFoundException("The downloaded file was not found.");
         }
 
-        var isAudio = job.Format == YoutubeFormats.Audio;
-        return new YoutubeDownloadFile(path, isAudio ? "audio/mpeg" : "video/mp4", $"{job.JobId:N}.{(isAudio ? "mp3" : "mp4")}");
+        var isAudio = task.Format == YoutubeFormats.Audio;
+        return new JobDownloadFile(path, isAudio ? "audio/mpeg" : "video/mp4", $"{task.JobId:N}.{(isAudio ? "mp3" : "mp4")}");
     }
 
     private static void ValidateRequest(CreateYoutubeJobRequest request)

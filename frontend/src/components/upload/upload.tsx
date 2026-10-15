@@ -15,10 +15,12 @@ import SingleFilePreview from './preview/single-file-preview'
 import { type UploadProps } from './types'
 
 export default function Upload({
+  className,
   disabled,
   multiple = false,
   error,
   helperText,
+  placeholder,
   //
   file,
   onDelete,
@@ -50,15 +52,20 @@ export default function Upload({
         {...getRootProps()}
         className={cn(
           'relative cursor-pointer rounded-lg border border-dashed border-main-color bg-main-color p-10 text-white transition-all hover:opacity-80',
+          hasFile && 'aspect-4/3',
+          className,
           isDragActive && 'opacity-80',
           isError && 'border-red-300 bg-red-50 text-red-600',
-          disabled && 'pointer-events-none opacity-50',
-          hasFile && 'aspect-4/3'
+          disabled && 'pointer-events-none opacity-50'
         )}
       >
         <input {...getInputProps()} />
 
-        <Placeholder className={cn(hasFile && 'opacity-0')} />
+        {placeholder ? (
+          <div className={cn(hasFile && 'opacity-0')}>{placeholder}</div>
+        ) : (
+          <Placeholder className={cn(hasFile && 'opacity-0')} />
+        )}
 
         {hasFile && <SingleFilePreview file={file} />}
       </div>

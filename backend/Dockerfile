@@ -30,6 +30,9 @@ COPY --from=build /app/publish .
 ENV ASPNETCORE_HTTP_PORTS=8080
 ENV Youtube__ExecutablePath=/usr/local/bin/yt-dlp
 ENV Youtube__JobsDirectory=/tmp/jobs
+ENV FileConversion__FfmpegExecutablePath=/usr/bin/ffmpeg
+ENV FileConversion__FfprobeExecutablePath=/usr/bin/ffprobe
+ENV FileConversion__JobsDirectory=/tmp/convert-jobs
 
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Utilities.Api.dll"]

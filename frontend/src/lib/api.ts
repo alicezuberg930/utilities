@@ -17,4 +17,9 @@ export const API = {
         PROGRESS: (jobId: string) => `/youtube/progress/${jobId}`,
         FILE: (jobId: string) => `/youtube/file/${jobId}`,
     },
+    CONVERT: {
+        JOB: "/convert/job",
+        PROGRESS: (jobId: string) => `/convert/progress/${jobId}`,
+        FILE: (jobId: string) => `/convert/file/${jobId}`,
+    },
 }

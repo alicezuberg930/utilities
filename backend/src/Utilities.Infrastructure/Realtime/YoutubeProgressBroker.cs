@@ -5,21 +5,21 @@ using Utilities.Application.Interfaces;
 
 namespace Utilities.Infrastructure.Realtime;
 
-public sealed class YoutubeProgressBroker : IYoutubeProgressStream, IYoutubeProgressPublisher
+public sealed class JobProgressBroker : IYoutubeProgressStream, IFileProgressStream, IJobProgressPublisher
 {
-    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Channel<YoutubeProgressEvent>>> _subscribers = new();
+    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Channel<JobProgressEvent>>> _subscribers = new();
 
-    public IYoutubeProgressSubscription Subscribe(Guid jobId)
+    public IJobProgressSubscription Subscribe(Guid jobId)
     {
         var subscriberId = Guid.NewGuid();
-        var channel = Channel.CreateUnbounded<YoutubeProgressEvent>();
+        var channel = Channel.CreateUnbounded<JobProgressEvent>();
         var subscribers = _subscribers.GetOrAdd(jobId, _ => new());
         subscribers[subscriberId] = channel;
 
-        return new YoutubeProgressSubscription(channel.Reader, () => Remove(jobId, subscriberId));
+        return new JobProgressSubscription(channel.Reader, () => Remove(jobId, subscriberId));
     }
 
-    public void PublishProgress(Guid jobId, double progress) => Publish(jobId, new YoutubeProgressEvent(null, new YoutubeProgress(progress)));
+    public void PublishProgress(Guid jobId, double progress) => Publish(jobId, new JobProgressEvent(null, new JobProgress(progress)));
 
     public void Complete(Guid jobId)
     {
@@ -27,7 +27,7 @@ public sealed class YoutubeProgressBroker : IYoutubeProgressStream, IYoutubeProg
 
         foreach (var channel in subscribers.Values)
         {
-            channel.Writer.TryWrite(new YoutubeProgressEvent("complete", "done"));
+            channel.Writer.TryWrite(new JobProgressEvent("complete", "done"));
             channel.Writer.TryComplete();
         }
     }
@@ -38,12 +38,12 @@ public sealed class YoutubeProgressBroker : IYoutubeProgressStream, IYoutubeProg
 
         foreach (var channel in subscribers.Values)
         {
-            channel.Writer.TryWrite(new YoutubeProgressEvent("error", new YoutubeFailure(message)));
+            channel.Writer.TryWrite(new JobProgressEvent("error", new JobFailure(message)));
             channel.Writer.TryComplete();
         }
     }
 
-    private void Publish(Guid jobId, YoutubeProgressEvent progressEvent)
+    private void Publish(Guid jobId, JobProgressEvent progressEvent)
     {
         if (!_subscribers.TryGetValue(jobId, out var subscribers)) return;
 
@@ -64,9 +64,9 @@ public sealed class YoutubeProgressBroker : IYoutubeProgressStream, IYoutubeProg
         }
     }
 
-    private sealed class YoutubeProgressSubscription(ChannelReader<YoutubeProgressEvent> reader, Action unsubscribe) : IYoutubeProgressSubscription
+    private sealed class JobProgressSubscription(ChannelReader<JobProgressEvent> reader, Action unsubscribe) : IJobProgressSubscription
     {
-        public IAsyncEnumerable<YoutubeProgressEvent> ReadAllAsync(CancellationToken cancellationToken) => reader.ReadAllAsync(cancellationToken);
+        public IAsyncEnumerable<JobProgressEvent> ReadAllAsync(CancellationToken cancellationToken) => reader.ReadAllAsync(cancellationToken);
 
         public void Dispose() => unsubscribe();
     }

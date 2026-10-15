@@ -4,7 +4,7 @@ namespace Utilities.Application.Interfaces;
 
 public interface IYoutubeFileStorage
 {
-    string GetOutputPath(YoutubeJob job);
+    string GetOutputPath(YoutubeTask task);
     bool Exists(string path);
     void EnsureDirectoryExists();
 }

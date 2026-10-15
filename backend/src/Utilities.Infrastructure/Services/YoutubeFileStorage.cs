@@ -10,10 +10,10 @@ public sealed class YoutubeFileStorage(IOptions<YoutubeOptions> options) : IYout
 {
     private readonly YoutubeOptions _options = options.Value;
 
-    public string GetOutputPath(YoutubeJob job)
+    public string GetOutputPath(YoutubeTask task)
     {
-        var extension = job.Format == YoutubeFormats.Audio ? "mp3" : "mp4";
-        return Path.Combine(_options.JobsDirectory, $"{job.JobId:N}.{extension}");
+        var extension = task.Format == YoutubeFormats.Audio ? "mp3" : "mp4";
+        return Path.Combine(_options.JobsDirectory, $"{task.JobId:N}.{extension}");
     }
 
     public bool Exists(string path) => File.Exists(path);

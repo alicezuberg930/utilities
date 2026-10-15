@@ -17,12 +17,12 @@ public sealed partial class YoutubeDownloader(
     private readonly YoutubeOptions _options = options.Value;
 
     public async Task<YoutubeDownloadResult> DownloadAsync(
-        YoutubeJob job,
+        YoutubeTask task,
         string outputPath,
         Action<double> reportProgress,
         CancellationToken cancellationToken)
     {
-        using var process = CreateDownloadProcess(job, outputPath);
+        using var process = CreateDownloadProcess(task, outputPath);
         var errors = new StringBuilder();
         var errorLock = new object();
 
@@ -62,13 +62,13 @@ public sealed partial class YoutubeDownloader(
 
         logger.LogWarning(
             "yt-dlp job {JobId} exited with code {ExitCode}: {Error}",
-            job.JobId,
+            task.JobId,
             process.ExitCode,
             errors);
         return YoutubeDownloadResult.Failed("The YouTube download failed.");
     }
 
-    private Process CreateDownloadProcess(YoutubeJob job, string outputPath)
+    private Process CreateDownloadProcess(YoutubeTask task, string outputPath)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -79,10 +79,10 @@ public sealed partial class YoutubeDownloader(
             CreateNoWindow = true,
         };
 
-        if (job.Format == YoutubeFormats.Audio)
+        if (task.Format == YoutubeFormats.Audio)
         {
             startInfo.ArgumentList.Add("-f");
-            startInfo.ArgumentList.Add(BuildAudioFormatSelector(job.AudioQuality));
+            startInfo.ArgumentList.Add(BuildAudioFormatSelector(task.AudioQuality));
             startInfo.ArgumentList.Add("-x");
             startInfo.ArgumentList.Add("--audio-format");
             startInfo.ArgumentList.Add("mp3");
@@ -90,7 +90,7 @@ public sealed partial class YoutubeDownloader(
         else
         {
             startInfo.ArgumentList.Add("-f");
-            startInfo.ArgumentList.Add(BuildVideoFormatSelector(job.VideoQuality));
+            startInfo.ArgumentList.Add(BuildVideoFormatSelector(task.VideoQuality));
             startInfo.ArgumentList.Add("--merge-output-format");
             startInfo.ArgumentList.Add("mp4");
         }
@@ -98,7 +98,7 @@ public sealed partial class YoutubeDownloader(
         startInfo.ArgumentList.Add("--newline");
         startInfo.ArgumentList.Add("-o");
         startInfo.ArgumentList.Add(outputPath);
-        startInfo.ArgumentList.Add(job.Url);
+        startInfo.ArgumentList.Add(task.Url);
 
         return new Process { StartInfo = startInfo };
     }

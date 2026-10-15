@@ -9,9 +9,9 @@ const FORMAT_EXCEL = ['xls', 'xlsx']
 const FORMAT_ZIP = ['zip', 'rar', 'iso']
 const FORMAT_ILLUSTRATOR = ['ai', 'esp']
 const FORMAT_POWERPOINT = ['ppt', 'pptx']
-const FORMAT_AUDIO = ['wav', 'aif', 'mp3', 'aac']
+const FORMAT_AUDIO = ['aac', 'aif', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wav', 'wma']
 const FORMAT_IMG = ['jpg', 'jpeg', 'gif', 'bmp', 'png', 'svg', 'jfif', 'webp']
-const FORMAT_VIDEO = ['m4v', 'avi', 'mpg', 'mp4', 'webm']
+const FORMAT_VIDEO = ['avi', 'flv', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'webm', 'wmv']
 
 const iconUrl = (icon: string) => `/assets/icons/files/${icon}.svg`
 

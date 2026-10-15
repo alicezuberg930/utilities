@@ -89,6 +89,9 @@ Configuration can be overridden with standard ASP.NET Core environment variables
 ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=utilities;Username=admin;Password=...
 Youtube__ExecutablePath=/usr/local/bin/yt-dlp
 Youtube__JobsDirectory=/tmp/jobs
+FileConversion__FfmpegExecutablePath=/usr/bin/ffmpeg
+FileConversion__FfprobeExecutablePath=/usr/bin/ffprobe
+FileConversion__JobsDirectory=/tmp/convert-jobs
 CORS_ORIGINS=https://example.com,https://admin.example.com
 ```
 
@@ -108,3 +111,13 @@ Example job request:
   "videoQuality": "720p"
 }
 ```
+
+## File conversion API
+
+The conversion API accepts audio and video uploads as `multipart/form-data`. FFmpeg and FFprobe must be available at the configured executable paths.
+
+- `POST /api/v1/convert/job` with form fields `file` and `convertedFormat`
+- `GET /api/v1/convert/progress/{jobId}` (server-sent events)
+- `GET /api/v1/convert/file/{jobId}`
+
+Supported audio outputs are `aac`, `flac`, `m4a`, `mp3`, `ogg`, `opus`, and `wav`. Supported video outputs are `avi`, `mkv`, `mov`, `mp4`, and `webm`. Video inputs can be converted to either audio or video; audio inputs can be converted to another audio format.

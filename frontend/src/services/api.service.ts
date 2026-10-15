@@ -23,6 +23,7 @@ import type {
     UpdateEventParams,
 } from '@/@types/event'
 import type { UploadFileParams, UploadFileResponse } from '@/@types/file'
+import type { FileConversionFormat, FileConversionJobResponse } from '@/@types/file-conversion'
 import type {
     CreateYoutubeJobRequest,
     YoutubeJobResponse,
@@ -97,3 +98,21 @@ export const getYoutubeProgressUrl = (jobId: string) =>
 
 export const getYoutubeFileUrl = (jobId: string) =>
     getApiUrl(API.YOUTUBE.FILE(jobId))
+
+// file conversion
+export const createFileConversionJob = async (
+    file: File,
+    convertedFormat: FileConversionFormat
+) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('convertedFormat', convertedFormat)
+
+    return httpClient.post<FileConversionJobResponse>(API.CONVERT.JOB, formData)
+}
+
+export const getFileConversionProgressUrl = (jobId: string) =>
+    getApiUrl(API.CONVERT.PROGRESS(jobId))
+
+export const getConvertedFileUrl = (jobId: string) =>
+    getApiUrl(API.CONVERT.FILE(jobId))

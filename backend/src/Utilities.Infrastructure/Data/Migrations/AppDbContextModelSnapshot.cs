@@ -22,15 +22,52 @@ namespace Utilities.Infrastructure.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Utilities.Domain.Entities.YoutubeJob", b =>
+            modelBuilder.Entity("Utilities.Domain.Entities.ConvertTask", b =>
                 {
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid")
                         .HasColumnName("job_id");
 
-                    b.Property<double?>("AudioQuality")
-                        .HasColumnType("double precision")
-                        .HasColumnName("audio_quality");
+                    b.Property<string>("ConvertedFormat")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("converted_format");
+
+                    b.Property<string>("DownloadUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("download_url");
+
+                    b.Property<string>("OriginalFormat")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("original_format");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.HasKey("JobId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_convert_tasks_status");
+
+                    b.ToTable("convert_tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_convert_tasks_status", "status IN ('pending', 'running', 'completed', 'failed')");
+                        });
+                });
+
+            modelBuilder.Entity("Utilities.Domain.Entities.Job", b =>
+                {
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -41,27 +78,45 @@ namespace Utilities.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("error");
 
-                    b.Property<string>("Format")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
-                        .HasColumnName("format");
-
                     b.Property<double>("Progress")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("double precision")
                         .HasDefaultValue(0.0)
                         .HasColumnName("progress");
 
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("JobId");
+
+                    b.ToTable("jobs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_jobs_progress", "progress >= 0 AND progress <= 100");
+                        });
+                });
+
+            modelBuilder.Entity("Utilities.Domain.Entities.YoutubeTask", b =>
+                {
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_id");
+
+                    b.Property<double?>("AudioQuality")
+                        .HasColumnType("double precision")
+                        .HasColumnName("audio_quality");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("format");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("status");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.Property<string>("Url")
                         .IsRequired()
@@ -76,20 +131,47 @@ namespace Utilities.Infrastructure.Data.Migrations
                     b.HasKey("JobId");
 
                     b.HasIndex("Status")
-                        .HasDatabaseName("ix_youtube_jobs_status");
+                        .HasDatabaseName("ix_youtube_tasks_status");
 
-                    b.ToTable("youtube_jobs", null, t =>
+                    b.ToTable("youtube_tasks", null, t =>
                         {
-                            t.HasCheckConstraint("ck_youtube_jobs_audio_quality", "audio_quality IS NULL OR audio_quality > 0");
+                            t.HasCheckConstraint("ck_youtube_tasks_audio_quality", "audio_quality IS NULL OR audio_quality > 0");
 
-                            t.HasCheckConstraint("ck_youtube_jobs_format", "format IN ('audio', 'video')");
+                            t.HasCheckConstraint("ck_youtube_tasks_format", "format IN ('audio', 'video')");
 
-                            t.HasCheckConstraint("ck_youtube_jobs_progress", "progress >= 0 AND progress <= 100");
+                            t.HasCheckConstraint("ck_youtube_tasks_status", "status IN ('pending', 'running', 'completed', 'failed')");
 
-                            t.HasCheckConstraint("ck_youtube_jobs_status", "status IN ('pending', 'running', 'completed', 'failed')");
-
-                            t.HasCheckConstraint("ck_youtube_jobs_video_quality", "video_quality IS NULL OR video_quality IN ('360p', '480p', '720p', '1080p')");
+                            t.HasCheckConstraint("ck_youtube_tasks_video_quality", "video_quality IS NULL OR video_quality IN ('360p', '480p', '720p', '1080p')");
                         });
+                });
+
+            modelBuilder.Entity("Utilities.Domain.Entities.ConvertTask", b =>
+                {
+                    b.HasOne("Utilities.Domain.Entities.Job", "Job")
+                        .WithOne("ConvertTask")
+                        .HasForeignKey("Utilities.Domain.Entities.ConvertTask", "JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
+            modelBuilder.Entity("Utilities.Domain.Entities.YoutubeTask", b =>
+                {
+                    b.HasOne("Utilities.Domain.Entities.Job", "Job")
+                        .WithOne("YoutubeTask")
+                        .HasForeignKey("Utilities.Domain.Entities.YoutubeTask", "JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
+            modelBuilder.Entity("Utilities.Domain.Entities.Job", b =>
+                {
+                    b.Navigation("ConvertTask");
+
+                    b.Navigation("YoutubeTask");
                 });
 #pragma warning restore 612, 618
         }

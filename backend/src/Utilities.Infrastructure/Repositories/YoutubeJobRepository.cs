@@ -6,19 +6,22 @@ using Utilities.Infrastructure.Data.Context;
 
 namespace Utilities.Infrastructure.Repositories;
 
-public sealed class YoutubeJobRepository(AppDbContext dbContext) : IYoutubeJobRepository
+public sealed class YoutubeTaskRepository(AppDbContext dbContext) : IYoutubeTaskRepository
 {
-    public async Task AddAsync(YoutubeJob job, CancellationToken cancellationToken)
+    public async Task AddAsync(YoutubeTask task, CancellationToken cancellationToken)
     {
-        dbContext.YoutubeJobs.Add(job);
+        dbContext.YoutubeTasks.Add(task);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<YoutubeJob?> FindAsync(Guid jobId, CancellationToken cancellationToken) => dbContext.YoutubeJobs.SingleOrDefaultAsync(job => job.JobId == jobId, cancellationToken);
+    public Task<YoutubeTask?> FindAsync(Guid jobId, CancellationToken cancellationToken) =>
+        dbContext.YoutubeTasks
+            .Include(task => task.Job)
+            .SingleOrDefaultAsync(task => task.JobId == jobId, cancellationToken);
 
-    public async Task<IReadOnlyList<Guid>> FindInterruptedJobIdsAsync(CancellationToken cancellationToken) => await dbContext.YoutubeJobs
-            .Where(job => job.Status == YoutubeJobStatuses.Pending || job.Status == YoutubeJobStatuses.Running)
-            .Select(job => job.JobId)
+    public async Task<IReadOnlyList<Guid>> FindInterruptedJobIdsAsync(CancellationToken cancellationToken) => await dbContext.YoutubeTasks
+            .Where(task => task.Status == JobStatuses.Pending || task.Status == JobStatuses.Running)
+            .Select(task => task.JobId)
             .ToListAsync(cancellationToken);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => dbContext.SaveChangesAsync(cancellationToken);

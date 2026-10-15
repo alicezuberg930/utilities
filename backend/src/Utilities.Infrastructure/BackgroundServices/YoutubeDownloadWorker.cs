@@ -10,7 +10,7 @@ namespace Utilities.Infrastructure.BackgroundServices;
 public sealed class YoutubeDownloadWorker(
     IServiceScopeFactory scopeFactory,
     IYoutubeDownloadQueue queue,
-    IYoutubeProgressPublisher progressPublisher,
+    IJobProgressPublisher progressPublisher,
     IYoutubeFileStorage fileStorage,
     YoutubeDownloader downloader,
     ILogger<YoutubeDownloadWorker> logger) : BackgroundService
@@ -43,7 +43,7 @@ public sealed class YoutubeDownloadWorker(
     private async Task RequeueInterruptedJobsAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IYoutubeJobRepository>();
+        var repository = scope.ServiceProvider.GetRequiredService<IYoutubeTaskRepository>();
         var jobIds = await repository.FindInterruptedJobIdsAsync(cancellationToken);
 
         foreach (var jobId in jobIds)
@@ -55,40 +55,40 @@ public sealed class YoutubeDownloadWorker(
     private async Task DownloadAsync(Guid jobId, CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IYoutubeJobRepository>();
-        var job = await repository.FindAsync(jobId, cancellationToken);
+        var repository = scope.ServiceProvider.GetRequiredService<IYoutubeTaskRepository>();
+        var task = await repository.FindAsync(jobId, cancellationToken);
 
-        if (job is null || job.Status is not (YoutubeJobStatuses.Pending or YoutubeJobStatuses.Running))
+        if (task is null || task.Status is not (JobStatuses.Pending or JobStatuses.Running))
         {
             return;
         }
 
-        job.Status = YoutubeJobStatuses.Running;
-        job.Error = null;
-        job.UpdatedAt = DateTimeOffset.UtcNow;
+        task.Status = JobStatuses.Running;
+        task.Job.Error = null;
+        task.Job.UpdatedAt = DateTimeOffset.UtcNow;
         await repository.SaveChangesAsync(cancellationToken);
 
         fileStorage.EnsureDirectoryExists();
-        var outputPath = fileStorage.GetOutputPath(job);
+        var outputPath = fileStorage.GetOutputPath(task);
         var result = await downloader.DownloadAsync(
-            job,
+            task,
             outputPath,
             progress => progressPublisher.PublishProgress(jobId, progress),
             cancellationToken);
 
         if (!result.Success)
         {
-            job.Status = YoutubeJobStatuses.Failed;
-            job.Error = result.Error;
-            job.UpdatedAt = DateTimeOffset.UtcNow;
+            task.Status = JobStatuses.Failed;
+            task.Job.Error = result.Error;
+            task.Job.UpdatedAt = DateTimeOffset.UtcNow;
             await repository.SaveChangesAsync(CancellationToken.None);
             progressPublisher.Fail(jobId, result.Error ?? "The download failed.");
             return;
         }
 
-        job.Status = YoutubeJobStatuses.Completed;
-        job.Progress = 100;
-        job.UpdatedAt = DateTimeOffset.UtcNow;
+        task.Status = JobStatuses.Completed;
+        task.Job.Progress = 100;
+        task.Job.UpdatedAt = DateTimeOffset.UtcNow;
         await repository.SaveChangesAsync(cancellationToken);
 
         progressPublisher.PublishProgress(jobId, 100);
@@ -98,14 +98,14 @@ public sealed class YoutubeDownloadWorker(
     private async Task MarkFailedAsync(Guid jobId, string message, CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IYoutubeJobRepository>();
-        var job = await repository.FindAsync(jobId, cancellationToken);
+        var repository = scope.ServiceProvider.GetRequiredService<IYoutubeTaskRepository>();
+        var task = await repository.FindAsync(jobId, cancellationToken);
 
-        if (job is not null)
+        if (task is not null)
         {
-            job.Status = YoutubeJobStatuses.Failed;
-            job.Error = message;
-            job.UpdatedAt = DateTimeOffset.UtcNow;
+            task.Status = JobStatuses.Failed;
+            task.Job.Error = message;
+            task.Job.UpdatedAt = DateTimeOffset.UtcNow;
             await repository.SaveChangesAsync(cancellationToken);
         }
 

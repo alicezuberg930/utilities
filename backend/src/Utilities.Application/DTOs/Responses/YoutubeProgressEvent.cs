@@ -1,7 +1,7 @@
 namespace Utilities.Application.DTOs.Responses;
 
-public sealed record YoutubeProgress(double Progress);
+public sealed record JobProgress(double Progress);
 
-public sealed record YoutubeFailure(string Message);
+public sealed record JobFailure(string Message);
 
-public sealed record YoutubeProgressEvent(string? Name, object Data);
+public sealed record JobProgressEvent(string? Name, object Data);

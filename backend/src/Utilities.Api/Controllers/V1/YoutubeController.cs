@@ -35,17 +35,17 @@ public sealed class YoutubeController(IYoutubeService youtubeService, IYoutubePr
         HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
         await Response.StartAsync(cancellationToken);
-        await WriteEventAsync(new YoutubeProgressEvent(null, new YoutubeProgress(job.Progress)), cancellationToken);
+        await WriteEventAsync(new JobProgressEvent(null, new JobProgress(job.Progress)), cancellationToken);
 
         if (job.IsCompleted)
         {
-            await WriteEventAsync(new YoutubeProgressEvent("complete", "done"), cancellationToken);
+            await WriteEventAsync(new JobProgressEvent("complete", "done"), cancellationToken);
             return;
         }
 
         if (job.IsFailed)
         {
-            await WriteEventAsync(new YoutubeProgressEvent("error", new YoutubeFailure(job.Error ?? "The download failed.")), cancellationToken);
+            await WriteEventAsync(new JobProgressEvent("error", new JobFailure(job.Error ?? "The download failed.")), cancellationToken);
             return;
         }
 
@@ -77,7 +77,7 @@ public sealed class YoutubeController(IYoutubeService youtubeService, IYoutubePr
     }
 
     private async Task WriteEventAsync(
-        YoutubeProgressEvent progressEvent,
+        JobProgressEvent progressEvent,
         CancellationToken cancellationToken)
     {
         if (progressEvent.Name is not null)
