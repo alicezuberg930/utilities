@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Utilities.Application.Interfaces;
 using Utilities.Infrastructure.BackgroundServices;
 using Utilities.Infrastructure.Configuration;
@@ -25,6 +26,7 @@ public static class ServiceCollectionExtensions
         var postgresConnection = configuration.GetConnectionString("Postgres") ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(postgresConnection));
+        services.AddSingleton<IValidateOptions<FileConversionOptions>, FileConversionOptionsValidator>();
         services
             .AddOptions<YoutubeOptions>()
             .Bind(configuration.GetSection(YoutubeOptions.SectionName))
@@ -49,12 +51,16 @@ public static class ServiceCollectionExtensions
                 options.FfprobeExecutablePath = ResolveExecutablePath(
                     options.FfprobeExecutablePath,
                     environment.ContentRootPath);
+                options.CadConverterExecutablePath = ResolveCadConverterExecutablePath(
+                    options.CadConverterExecutablePath,
+                    environment.ContentRootPath);
                 if (!Path.IsPathFullyQualified(options.JobsDirectory))
                 {
                     options.JobsDirectory = Path.GetFullPath(
                         Path.Combine(environment.ContentRootPath, options.JobsDirectory));
                 }
-            });
+            })
+            .ValidateOnStart();
 
         services.AddScoped<IYoutubeTaskRepository, YoutubeTaskRepository>();
         services.AddScoped<IConvertTaskRepository, ConvertTaskRepository>();
@@ -73,7 +79,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJobProgressPublisher>(provider => provider.GetRequiredService<JobProgressBroker>());
 
         services.AddSingleton<YoutubeDownloader>();
-        services.AddSingleton<FileConverter>();
+        services.AddSingleton<ICadConverterProcess, CadConverterProcess>();
+        services.AddSingleton<IFileConversionEngine, MediaFileConversionEngine>();
+        services.AddSingleton<IFileConversionEngine, CadFileConversionEngine>();
+        services.AddSingleton<FileConversionDispatcher>();
         services.AddHostedService<YoutubeDownloadWorker>();
         services.AddHostedService<FileConversionWorker>();
 
@@ -86,4 +95,34 @@ public static class ServiceCollectionExtensions
          executablePath.Contains(Path.AltDirectorySeparatorChar))
             ? Path.GetFullPath(Path.Combine(contentRootPath, executablePath))
             : executablePath;
+
+    private static string ResolveCadConverterExecutablePath(
+        string executablePath,
+        string contentRootPath)
+    {
+        var resolvedPath = ResolveExecutablePath(executablePath, contentRootPath);
+        var defaultCommandName = OperatingSystem.IsWindows()
+            ? "utilities-cad-converter.exe"
+            : "utilities-cad-converter";
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!string.Equals(resolvedPath, defaultCommandName, comparison))
+        {
+            return resolvedPath;
+        }
+
+        var localWorkerPath = Path.GetFullPath(Path.Combine(
+            contentRootPath,
+            "..",
+            "..",
+            "vendor",
+            "cad-converter-worker",
+            "target",
+            "release",
+            defaultCommandName));
+
+        return File.Exists(localWorkerPath) ? localWorkerPath : resolvedPath;
+    }
 }

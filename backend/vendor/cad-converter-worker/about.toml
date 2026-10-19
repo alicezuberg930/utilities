@@ -1,0 +1,18 @@
+# License policy used to generate THIRD_PARTY_LICENSES.txt.
+# Keep this list narrow: every accepted identifier must be reviewed before it
+# is added. `cargo about generate` fails when a dependency falls outside it.
+accepted = [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+ignore-build-dependencies = false
+ignore-dev-dependencies = false
+
+[private]
+ignore = true
+

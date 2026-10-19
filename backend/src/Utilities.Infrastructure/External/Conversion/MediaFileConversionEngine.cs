@@ -3,17 +3,20 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Utilities.Application.Interfaces;
 using Utilities.Domain.Constants;
 using Utilities.Domain.Entities;
 using Utilities.Infrastructure.Configuration;
 
 namespace Utilities.Infrastructure.External.Conversion;
 
-public sealed class FileConverter(
+public sealed class MediaFileConversionEngine(
     IOptions<FileConversionOptions> options,
-    ILogger<FileConverter> logger)
+    ILogger<MediaFileConversionEngine> logger) : IFileConversionEngine
 {
     private readonly FileConversionOptions _options = options.Value;
+
+    public bool CanConvert(string originalFormat, string convertedFormat) => FileConversionFormats.IsMediaConversion(originalFormat, convertedFormat);
 
     public async Task<FileConversionResult> ConvertAsync(
         ConvertTask task,
@@ -27,8 +30,7 @@ public sealed class FileConverter(
         var errors = new StringBuilder();
         var errorLock = new object();
 
-        process.OutputDataReceived += (_, args) =>
-            HandleProgress(args.Data, durationSeconds, reportProgress);
+        process.OutputDataReceived += (_, args) => HandleProgress(args.Data, durationSeconds, reportProgress);
         process.ErrorDataReceived += (_, args) =>
         {
             if (args.Data is null) return;
@@ -222,10 +224,4 @@ public sealed class FileConverter(
             // The process exited between the state check and the kill request.
         }
     }
-}
-
-public sealed record FileConversionResult(bool Success, string? Error)
-{
-    public static FileConversionResult Succeeded() => new(true, null);
-    public static FileConversionResult Failed(string error) => new(false, error);
 }

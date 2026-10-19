@@ -4,6 +4,7 @@ export type FileConversionFormat =
   | 'aac'
   | 'avi'
   | 'flac'
+  | 'glb'
   | 'm4a'
   | 'mkv'
   | 'mov'

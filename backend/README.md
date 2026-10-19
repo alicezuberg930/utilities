@@ -36,6 +36,8 @@ backend/
 |       |-- Realtime/
 |       |-- Repositories/
 |       `-- Services/
+|-- vendor/
+|   `-- cad-converter-worker/          # Isolated open-source DWG/DXF -> GLB worker (Rust)
 |-- Dockerfile
 `-- Dockerfile.dockerignore
 ```
@@ -60,15 +62,26 @@ References:
 
 ## Run locally
 
-PostgreSQL and `yt-dlp` must be available. The checked-in development connection string matches the PostgreSQL service in the repository's `docker-compose.yml`.
+PostgreSQL, `yt-dlp`, and a Rust toolchain must be available. The checked-in development connection string matches the PostgreSQL service in the repository's `docker-compose.yml`.
 On Windows, the Development configuration resolves `programs/yt-dlp.exe` from the repository automatically, so it does not need to be added to `PATH`.
 
 ```powershell
 docker compose up -d postgres
+cargo build --release --locked --manifest-path backend/vendor/cad-converter-worker/Cargo.toml
 dotnet run --project backend/src/Utilities.Api/Utilities.Api.csproj
 ```
 
-The development profile listens at `http://localhost:4000`. Development startup applies pending EF Core migrations. Production leaves automatic migration disabled by default; Docker Compose explicitly enables it for this single-instance setup.
+The Development configuration resolves the worker from
+`backend/vendor/cad-converter-worker/target/release`. `dotnet build` does not
+rebuild the Rust worker, so rerun the Cargo command after every worker source
+change. The production Docker image builds and installs the worker
+automatically; rebuild it instead of restarting a stale image:
+
+```powershell
+docker compose up --build -d app
+```
+
+The development profile listens at `http://localhost:4000`. Development startup applies pending EF Core migrations. Production leaves automatic migration disabled by default; if the commented application service in Docker Compose is enabled, its example configuration explicitly enables migrations for that single-instance setup.
 
 To build the entire solution:
 
@@ -91,6 +104,7 @@ Youtube__ExecutablePath=/usr/local/bin/yt-dlp
 Youtube__JobsDirectory=/tmp/jobs
 FileConversion__FfmpegExecutablePath=/usr/bin/ffmpeg
 FileConversion__FfprobeExecutablePath=/usr/bin/ffprobe
+FileConversion__CadConverterExecutablePath=/usr/local/bin/utilities-cad-converter
 FileConversion__JobsDirectory=/tmp/convert-jobs
 CORS_ORIGINS=https://example.com,https://admin.example.com
 ```
@@ -114,10 +128,46 @@ Example job request:
 
 ## File conversion API
 
-The conversion API accepts audio and video uploads as `multipart/form-data`. FFmpeg and FFprobe must be available at the configured executable paths.
+The conversion API accepts audio, video, DWG, DXF, DWT, and DWS uploads as `multipart/form-data`. FFmpeg and FFprobe handle media conversions. CAD conversion runs in a separate, time-bounded open-source Rust worker, so worker panics and ordinary process crashes are isolated from the API process. This is crash isolation rather than a complete security sandbox; deployments accepting untrusted files should also enforce container memory, CPU, request-size, and storage limits.
 
 - `POST /api/v1/convert/job` with form fields `file` and `convertedFormat`
 - `GET /api/v1/convert/progress/{jobId}` (server-sent events)
 - `GET /api/v1/convert/file/{jobId}`
 
-Supported audio outputs are `aac`, `flac`, `m4a`, `mp3`, `ogg`, `opus`, and `wav`. Supported video outputs are `avi`, `mkv`, `mov`, `mp4`, and `webm`. Video inputs can be converted to either audio or video; audio inputs can be converted to another audio format.
+Supported audio outputs are `aac`, `flac`, `m4a`, `mp3`, `ogg`, `opus`, and `wav`. Supported video outputs are `avi`, `mkv`, `mov`, `mp4`, and `webm`. Video inputs can be converted to either audio or video; audio inputs can be converted to another audio format. DWG, DXF, DWT, and DWS inputs can be converted to `glb`.
+
+The worker uses pinned [opencadcodec](https://github.com/HakanSeven12/opencadcodec) and [opencadkernel](https://github.com/HakanSeven12/opencadkernel) revisions (MPL-2.0). It reads native DWG/DWS/DWT and DXF files, compiles each reusable block variant once, and represents every INSERT/MINSERT occurrence with a transformed glTF node that references shared mesh data. Nested transforms are composed; inherited appearance or scale-dependent tessellation creates a separate variant only when required. Non-repeated geometry is combined into bounded target-size batches without losing layer/color primitive groups. The worker exports analytic ACIS `3DSOLID`, `BODY`, `REGION`, and surface B-reps through adaptive kernel tessellation. B-rep boundary edges are emitted as glTF line primitives alongside shaded triangles. Common CAD wire and mesh entities are also exported, including rational/fit splines, helixes, point markers, and finite model-extent visualizations of rays and construction lines. Known drawing units are converted to glTF metres, per-mesh anchors preserve large-coordinate precision, and AutoCAD Z-up coordinates are rotated to glTF Y-up coordinates. Unitless or unknown `INSUNITS` values fall back to one metre per drawing unit and emit a warning.
+
+Completeness is strict by default: an ACIS payload that cannot be parsed or lifted, a lost B-rep record, or a face that cannot be tessellated fails the job instead of publishing a deceptively sparse model. Hidden/off/frozen geometry and edge wires are included by default. Unsupported annotation and proxy entities are counted in the worker's final CLI statistics; strict conversion failures are written to worker diagnostics and server logs.
+
+Third-party licensing and exact source revisions are documented in `vendor/cad-converter-worker/THIRD_PARTY_NOTICES.md`. The complete resolved Rust dependency inventory and license texts are in `vendor/cad-converter-worker/THIRD_PARTY_LICENSES.txt`; the production image installs both files under `/usr/share/doc/utilities-cad-converter/`.
+
+The upload API currently accepts one source file. Embedded block references work; external XREF files are not imported by this endpoint. Supporting arbitrary XREF sets requires a future ZIP or multipart bundle endpoint, and external references are reported rather than silently treated as converted geometry.
+
+CAD conversion limits can be overridden with standard configuration keys:
+
+```text
+FileConversion__CadConverterExecutablePath=/usr/local/bin/utilities-cad-converter
+FileConversion__CadConversionTimeoutSeconds=900
+FileConversion__CadLinearDeflectionMeters=0.0005
+FileConversion__CadAngularDeflectionDegrees=10
+FileConversion__CadIncludeHiddenObjects=true
+FileConversion__CadExportEdgeWires=true
+FileConversion__CadRequireCompleteGeometry=true
+FileConversion__CadMaxInputBytes=268435456
+FileConversion__CadMaxEntities=250000
+FileConversion__CadMaxVertices=5000000
+FileConversion__CadMaxTriangles=2000000
+FileConversion__CadMaxLineSegments=2000000
+FileConversion__CadMaxOutputBytes=268435456
+```
+
+The byte limits default to 256 MiB. `CadMaxEntities` independently caps stored
+document entities, unique compilation visits, prototype placements, logical
+block occurrences, and emitted glTF nodes. Geometry limits count unique encoded
+`POSITION` elements, source triangles, and source line segments, so repeated
+nodes do not repay the same mesh cost. Exceeding any limit fails the conversion
+without publishing a partial model; limits are never handled by silently
+truncating geometry. The output limit must fit the GLB format's 32-bit
+total-length field. The worker's final JSON distinguishes rendered occurrence
+totals from once-encoded unique triangle/line totals.

@@ -119,7 +119,8 @@ public sealed class FileConversionService(
         var extension = Path.GetExtension(Path.GetFileName(fileName)).TrimStart('.').ToLowerInvariant();
         if (extension.Length == 0 ||
             (!FileConversionFormats.AudioInputs.Contains(extension) &&
-             !FileConversionFormats.VideoInputs.Contains(extension)))
+             !FileConversionFormats.VideoInputs.Contains(extension) &&
+             !FileConversionFormats.CadInputs.Contains(extension)))
         {
             throw new RequestValidationException("The source file format is not supported.");
         }
@@ -132,7 +133,8 @@ public sealed class FileConversionService(
         var extension = convertedFormat?.Trim().TrimStart('.').ToLowerInvariant();
         if (string.IsNullOrEmpty(extension) ||
             (!FileConversionFormats.AudioOutputs.Contains(extension) &&
-             !FileConversionFormats.VideoOutputs.Contains(extension)))
+             !FileConversionFormats.VideoOutputs.Contains(extension) &&
+             !FileConversionFormats.CadOutputs.Contains(extension)))
         {
             throw new RequestValidationException("The converted file format is not supported.");
         }
@@ -153,6 +155,7 @@ public sealed class FileConversionService(
         "mov" => "video/quicktime",
         "mp4" => "video/mp4",
         "webm" => "video/webm",
+        "glb" => "model/gltf-binary",
         _ => "application/octet-stream",
     };
 }

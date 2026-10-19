@@ -12,7 +12,7 @@ public sealed class FileConversionWorker(
     IFileConversionQueue queue,
     IJobProgressPublisher progressPublisher,
     IFileConversionStorage fileStorage,
-    FileConverter converter,
+    FileConversionDispatcher converter,
     ILogger<FileConversionWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

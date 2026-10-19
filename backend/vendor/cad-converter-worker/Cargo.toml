@@ -1,0 +1,25 @@
+[package]
+name = "utilities-cad-converter"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Isolated DWG/DXF to GLB conversion worker for Utilities"
+publish = false
+
+[[bin]]
+name = "utilities-cad-converter"
+path = "src/main.rs"
+
+[dependencies]
+# Keep the revision spelling identical to opencadkernel's `acis` feature so
+# Cargo unifies the codec crate (and therefore its SatDocument type).
+opencadcodec = { git = "https://github.com/HakanSeven12/opencadcodec.git", rev = "f385f75" }
+opencadkernel = { git = "https://github.com/HakanSeven12/opencadkernel.git", rev = "9841749422c8fb0fa1f68205ac725d27f13e13bd", features = ["acis"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = true
+

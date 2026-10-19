@@ -40,12 +40,17 @@ import { z } from 'zod'
 
 const AUDIO_INPUTS = new Set(['aac', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wav', 'wma'])
 const VIDEO_INPUTS = new Set(['avi', 'flv', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'webm', 'wmv'])
+const CAD_INPUTS = new Set(['dwg', 'dxf', 'dws', 'dwt'])
 const AUDIO_OUTPUTS: FileConversionFormat[] = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus']
 const VIDEO_OUTPUTS: FileConversionFormat[] = ['mp4', 'webm', 'mov', 'mkv', 'avi']
-const ALL_OUTPUTS = [...AUDIO_OUTPUTS, ...VIDEO_OUTPUTS]
+const CAD_OUTPUTS: FileConversionFormat[] = ['glb']
+const ALL_OUTPUTS = [...AUDIO_OUTPUTS, ...VIDEO_OUTPUTS, ...CAD_OUTPUTS]
 const FILE_ACCEPT = {
   'audio/*': [...AUDIO_INPUTS].map(format => `.${format}`),
   'video/*': [...VIDEO_INPUTS].map(format => `.${format}`),
+  'application/octet-stream': [...CAD_INPUTS].map(format => `.${format}`),
+  'image/vnd.dwg': ['.dwg'],
+  'image/vnd.dxf': ['.dxf'],
 }
 
 type ConversionStatus = 'idle' | 'ready' | 'uploading' | 'converting' | 'completed' | 'failed'
@@ -60,12 +65,19 @@ const getExtension = (fileName: string) => fileName.split('.').pop()?.toLowerCas
 const isSupportedSource = (value: unknown): value is CustomFile => {
   if (!(value instanceof File)) return false
   const extension = getExtension(value.name)
-  return AUDIO_INPUTS.has(extension) || VIDEO_INPUTS.has(extension)
+  return AUDIO_INPUTS.has(extension) || VIDEO_INPUTS.has(extension) || CAD_INPUTS.has(extension)
+}
+
+const getValidOutputs = (sourceFormat: string): FileConversionFormat[] => {
+  if (AUDIO_INPUTS.has(sourceFormat)) return AUDIO_OUTPUTS
+  if (VIDEO_INPUTS.has(sourceFormat)) return [...VIDEO_OUTPUTS, ...AUDIO_OUTPUTS]
+  if (CAD_INPUTS.has(sourceFormat)) return CAD_OUTPUTS
+  return []
 }
 
 const fileConversionSchema = z.object({
   file: z.custom<CustomFile | null>(isSupportedSource, {
-    message: 'Select a supported audio or video file.',
+    message: 'Select a supported audio, video, or AutoCAD drawing file.',
   }),
   convertedFormat: z.custom<FileConversionFormat | ''>(
     value => typeof value === 'string' && ALL_OUTPUTS.includes(value as FileConversionFormat),
@@ -75,9 +87,7 @@ const fileConversionSchema = z.object({
   if (!isSupportedSource(values.file) || !values.convertedFormat) return
 
   const sourceFormat = getExtension(values.file.name)
-  const validOutputs = AUDIO_INPUTS.has(sourceFormat)
-    ? AUDIO_OUTPUTS
-    : [...VIDEO_OUTPUTS, ...AUDIO_OUTPUTS]
+  const validOutputs = getValidOutputs(sourceFormat)
 
   if (sourceFormat === values.convertedFormat || !validOutputs.includes(values.convertedFormat)) {
     context.addIssue({
@@ -130,11 +140,11 @@ const UploadPlaceholder = () => (
       <UploadCloudIcon className='size-7 text-muted-foreground' />
     </div>
     <div className='space-y-1'>
-      <p className='font-medium'>Drag and drop an audio or video file</p>
+      <p className='font-medium'>Drag and drop an audio, video, or AutoCAD drawing file</p>
       <p className='text-sm text-muted-foreground'>or click to browse from your device</p>
     </div>
     <div className='flex max-w-2xl flex-wrap justify-center gap-1.5'>
-      {['MP3', 'WAV', 'FLAC', 'MP4', 'MOV', 'MKV', 'WEBM'].map(format => (
+      {['MP3', 'WAV', 'MP4', 'MOV', 'DWG', 'DXF', 'GLB'].map(format => (
         <Badge key={format} variant='outline'>{format}</Badge>
       ))}
     </div>
@@ -159,14 +169,14 @@ export default function FileConversion() {
   const terminalEventRef = useRef(false)
 
   const sourceFormat = file ? getExtension(file.name) : ''
-  const sourceIsAudio = AUDIO_INPUTS.has(sourceFormat)
   const sourceIsVideo = VIDEO_INPUTS.has(sourceFormat)
+  const sourceIsCad = CAD_INPUTS.has(sourceFormat)
   const isBusy = status === 'uploading' || status === 'converting'
 
   const outputFormats = useMemo(() => {
-    const formats = sourceIsAudio ? AUDIO_OUTPUTS : sourceIsVideo ? [...VIDEO_OUTPUTS, ...AUDIO_OUTPUTS] : []
+    const formats = getValidOutputs(sourceFormat)
     return formats.filter(format => format !== sourceFormat)
-  }, [sourceFormat, sourceIsAudio, sourceIsVideo])
+  }, [sourceFormat])
 
   const closeProgressStream = useCallback(() => {
     eventSourceRef.current?.close()
@@ -200,14 +210,14 @@ export default function FileConversion() {
       if (fileRejections.length > 0) {
         form.setError('file', {
           type: 'file-invalid-type',
-          message: 'That file type is not supported. Choose a supported audio or video file.',
+          message: 'That file type is not supported. Choose a supported audio, video, or AutoCAD drawing file.',
         })
       }
       return
     }
 
     const format = getExtension(selectedFile.name)
-    const availableFormats = (AUDIO_INPUTS.has(format) ? AUDIO_OUTPUTS : [...VIDEO_OUTPUTS, ...AUDIO_OUTPUTS])
+    const availableFormats = getValidOutputs(format)
       .filter(output => output !== format)
 
     form.clearErrors(['file', 'convertedFormat'])
@@ -295,7 +305,7 @@ export default function FileConversion() {
         <CardHeader>
           <CardTitle className='text-xl'>File converter</CardTitle>
           <CardDescription>
-            Convert audio and video files into the format you need.
+            Convert audio and video files, or turn DWG, DXF, DWT, and DWS drawings into GLB models.
           </CardDescription>
         </CardHeader>
 
@@ -343,6 +353,14 @@ export default function FileConversion() {
                             <SelectValue placeholder='Choose a format' />
                           </SelectTrigger>
                           <SelectContent alignItemWithTrigger={false}>
+                            {sourceIsCad && (
+                              <SelectGroup>
+                                <SelectLabel>3D model</SelectLabel>
+                                {outputFormats.filter(format => CAD_OUTPUTS.includes(format)).map(format => (
+                                  <SelectItem key={format} value={format}>{format.toUpperCase()}</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
                             {sourceIsVideo && (
                               <SelectGroup>
                                 <SelectLabel>Video</SelectLabel>
@@ -351,12 +369,14 @@ export default function FileConversion() {
                                 ))}
                               </SelectGroup>
                             )}
-                            <SelectGroup>
-                              <SelectLabel>{sourceIsVideo ? 'Audio' : 'Audio formats'}</SelectLabel>
-                              {outputFormats.filter(format => AUDIO_OUTPUTS.includes(format)).map(format => (
-                                <SelectItem key={format} value={format}>{format.toUpperCase()}</SelectItem>
-                              ))}
-                            </SelectGroup>
+                            {!sourceIsCad && (
+                              <SelectGroup>
+                                <SelectLabel>{sourceIsVideo ? 'Audio' : 'Audio formats'}</SelectLabel>
+                                {outputFormats.filter(format => AUDIO_OUTPUTS.includes(format)).map(format => (
+                                  <SelectItem key={format} value={format}>{format.toUpperCase()}</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
                           </SelectContent>
                         </Select>
                         {!!error && <FieldError errors={[error]} />}

@@ -3,3 +3,4 @@
 !backend/**
 backend/**/bin/
 backend/**/obj/
+backend/**/target/

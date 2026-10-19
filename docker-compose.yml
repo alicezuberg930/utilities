@@ -1,34 +1,39 @@
 name: utilities
 
 services:
-  # app:
-  #   restart: unless-stopped
-  #   build:
-  #     context: .
-  #     dockerfile: backend/Dockerfile
+  app:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
 
-  #   environment:
-  #     ASPNETCORE_ENVIRONMENT: Production
-  #     ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=utilities;Username=admin;Password=123456
-  #     Database__MigrateOnStartup: "true"
-  #     Youtube__ExecutablePath: /usr/local/bin/yt-dlp
-  #     Youtube__JobsDirectory: /tmp/jobs
-  #     FileConversion__FfmpegExecutablePath: /usr/bin/ffmpeg
-  #     FileConversion__FfprobeExecutablePath: /usr/bin/ffprobe
-  #     FileConversion__JobsDirectory: /tmp/convert-jobs
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=utilities;Username=admin;Password=123456
+      Database__MigrateOnStartup: "true"
+      Youtube__ExecutablePath: /usr/local/bin/yt-dlp
+      Youtube__JobsDirectory: /tmp/jobs
+      FileConversion__FfmpegExecutablePath: /usr/bin/ffmpeg
+      FileConversion__FfprobeExecutablePath: /usr/bin/ffprobe
+      FileConversion__CadConverterExecutablePath: /usr/local/bin/utilities-cad-converter
+      FileConversion__JobsDirectory: /tmp/convert-jobs
+      FileConversion__CadMaxEntities: 500000
+      FileConversion__CadMaxVertices: 8000000
+      FileConversion__CadMaxTriangles: 4000000
+      FileConversion__CadMaxLineSegments: 4000000
 
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   ports:
-  #     - "4000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4000:8080"
 
-  #   volumes:
-  #     - youtube-jobs:/tmp/jobs
-  #     - convert-jobs:/tmp/convert-jobs
+    volumes:
+      - youtube-jobs:/tmp/jobs
+      - convert-jobs:/tmp/convert-jobs
 
-  #   networks:
-  #     - app-net
+    networks:
+      - app-utilities
 
   postgres:
     image: postgres:16-alpine
@@ -46,7 +51,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
     ports:
-      - "5432:5432"
+      - "5436:5432"
 
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U admin -d utilities" ]

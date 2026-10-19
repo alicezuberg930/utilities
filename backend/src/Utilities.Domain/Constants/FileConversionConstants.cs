@@ -48,10 +48,24 @@ public static class FileConversionFormats
         "webm",
     };
 
-    public static bool IsSupportedConversion(string originalFormat, string convertedFormat) =>
-        originalFormat != convertedFormat &&
-        (AudioInputs.Contains(originalFormat)
-            ? AudioOutputs.Contains(convertedFormat)
-            : VideoInputs.Contains(originalFormat) &&
-              (AudioOutputs.Contains(convertedFormat) || VideoOutputs.Contains(convertedFormat)));
+    public static readonly IReadOnlySet<string> CadInputs = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "dwg",
+        "dxf",
+        "dws",
+        "dwt",
+    };
+
+    public static readonly IReadOnlySet<string> CadOutputs = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "glb",
+    };
+
+    public static bool IsMediaConversion(string originalFormat, string convertedFormat) => originalFormat != convertedFormat && (AudioInputs.Contains(originalFormat)
+        ? AudioOutputs.Contains(convertedFormat)
+        : VideoInputs.Contains(originalFormat) && (AudioOutputs.Contains(convertedFormat) || VideoOutputs.Contains(convertedFormat)));
+
+    public static bool IsCadConversion(string originalFormat, string convertedFormat) => CadInputs.Contains(originalFormat) && CadOutputs.Contains(convertedFormat);
+
+    public static bool IsSupportedConversion(string originalFormat, string convertedFormat) => IsMediaConversion(originalFormat, convertedFormat) || IsCadConversion(originalFormat, convertedFormat);
 }
