@@ -117,10 +117,7 @@ public sealed class FileConversionService(
     private static string NormalizeOriginalFormat(string fileName)
     {
         var extension = Path.GetExtension(Path.GetFileName(fileName)).TrimStart('.').ToLowerInvariant();
-        if (extension.Length == 0 ||
-            (!FileConversionFormats.AudioInputs.Contains(extension) &&
-             !FileConversionFormats.VideoInputs.Contains(extension) &&
-             !FileConversionFormats.CadInputs.Contains(extension)))
+        if (extension.Length == 0 || !FileConversionFormats.IsSupportedInput(extension))
         {
             throw new RequestValidationException("The source file format is not supported.");
         }
@@ -131,10 +128,7 @@ public sealed class FileConversionService(
     private static string NormalizeConvertedFormat(string? convertedFormat)
     {
         var extension = convertedFormat?.Trim().TrimStart('.').ToLowerInvariant();
-        if (string.IsNullOrEmpty(extension) ||
-            (!FileConversionFormats.AudioOutputs.Contains(extension) &&
-             !FileConversionFormats.VideoOutputs.Contains(extension) &&
-             !FileConversionFormats.CadOutputs.Contains(extension)))
+        if (string.IsNullOrEmpty(extension) || !FileConversionFormats.IsSupportedOutput(extension))
         {
             throw new RequestValidationException("The converted file format is not supported.");
         }
@@ -155,6 +149,34 @@ public sealed class FileConversionService(
         "mov" => "video/quicktime",
         "mp4" => "video/mp4",
         "webm" => "video/webm",
+        "apng" => "image/apng",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "dpx" => "image/dpx",
+        "exr" => "image/x-exr",
+        "fits" => "image/fits",
+        "gif" => "image/gif",
+        "hdr" => "image/vnd.radiance",
+        "ico" => "image/vnd.microsoft.icon",
+        "j2c" or "j2k" or "jls" or "jp2" => "image/jp2",
+        "jpeg" or "jpg" or "ljpg" => "image/jpeg",
+        "jxl" => "image/jxl",
+        "pam" or "pnm" => "image/x-portable-anymap",
+        "pbm" => "image/x-portable-bitmap",
+        "pcx" => "image/x-pcx",
+        "pfm" => "image/x-portable-floatmap",
+        "pgm" or "pgmyuv" => "image/x-portable-graymap",
+        "png" => "image/png",
+        "ppm" => "image/x-portable-pixmap",
+        "qoi" => "image/qoi",
+        "ras" or "rs" or "sun" or "sunras" => "image/x-cmu-raster",
+        "sgi" => "image/sgi",
+        "tga" => "image/x-tga",
+        "tif" or "tiff" => "image/tiff",
+        "wbmp" => "image/vnd.wap.wbmp",
+        "webp" => "image/webp",
+        "xbm" => "image/x-xbitmap",
+        "xpm" => "image/x-xpixmap",
         "glb" => "model/gltf-binary",
         _ => "application/octet-stream",
     };

@@ -16,7 +16,7 @@ public sealed class MediaFileConversionEngine(
 {
     private readonly FileConversionOptions _options = options.Value;
 
-    public bool CanConvert(string originalFormat, string convertedFormat) => FileConversionFormats.IsMediaConversion(originalFormat, convertedFormat);
+    public bool CanConvert(string originalFormat, string convertedFormat) => FileConversionFormats.IsFfmpegConversion(originalFormat, convertedFormat);
 
     public async Task<FileConversionResult> ConvertAsync(
         ConvertTask task,
@@ -25,7 +25,11 @@ public sealed class MediaFileConversionEngine(
         Action<double> reportProgress,
         CancellationToken cancellationToken)
     {
-        var durationSeconds = await GetDurationSecondsAsync(inputPath, cancellationToken);
+        var durationSeconds = FileConversionFormats.IsImageConversion(
+            task.OriginalFormat,
+            task.ConvertedFormat)
+            ? null
+            : await GetDurationSecondsAsync(inputPath, cancellationToken);
         using var process = CreateConversionProcess(task, inputPath, outputPath);
         var errors = new StringBuilder();
         var errorLock = new object();
@@ -88,6 +92,18 @@ public sealed class MediaFileConversionEngine(
             startInfo.ArgumentList.Add("0:a:0");
             startInfo.ArgumentList.Add("-vn");
             AddAudioCodecArguments(startInfo, task.ConvertedFormat);
+        }
+        else if (FileConversionFormats.ImageOutputs.Contains(task.ConvertedFormat))
+        {
+            startInfo.ArgumentList.Add("-map");
+            startInfo.ArgumentList.Add("0:v:0");
+            startInfo.ArgumentList.Add("-an");
+            if (!FileConversionFormats.AnimatedImageOutputs.Contains(task.ConvertedFormat))
+            {
+                startInfo.ArgumentList.Add("-frames:v");
+                startInfo.ArgumentList.Add("1");
+            }
+            AddImageCodecArguments(startInfo, task.ConvertedFormat);
         }
         else
         {
@@ -190,6 +206,31 @@ public sealed class MediaFileConversionEngine(
         {
             startInfo.ArgumentList.Add("-movflags");
             startInfo.ArgumentList.Add("+faststart");
+        }
+    }
+
+    private static void AddImageCodecArguments(ProcessStartInfo startInfo, string format)
+    {
+        switch (format)
+        {
+            case "ljpg":
+                startInfo.ArgumentList.Add("-pix_fmt");
+                startInfo.ArgumentList.Add("yuvj444p");
+                break;
+            case "vbn":
+                startInfo.ArgumentList.Add("-pix_fmt");
+                startInfo.ArgumentList.Add("rgba");
+                startInfo.ArgumentList.Add("-vf");
+                startInfo.ArgumentList.Add("pad=ceil(iw/4)*4:ceil(ih/4)*4");
+                break;
+            case "xface":
+                startInfo.ArgumentList.Add("-vf");
+                startInfo.ArgumentList.Add("scale=48:48");
+                break;
+            case "ico":
+                startInfo.ArgumentList.Add("-vf");
+                startInfo.ArgumentList.Add("scale=256:256:force_original_aspect_ratio=decrease");
+                break;
         }
     }
 

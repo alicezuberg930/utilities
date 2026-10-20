@@ -53,7 +53,56 @@ public sealed class FileConversionServiceTests
         Assert.Empty(calls);
     }
 
-    private sealed class FakeConvertTaskRepository(List<string> calls) : IConvertTaskRepository
+    [Fact]
+    public async Task CreateJobAsync_ValidImageRequest_NormalizesPersistsAndQueuesJob()
+    {
+        var calls = new List<string>();
+        var repository = new FakeConvertTaskRepository(calls);
+        var queue = new FakeFileConversionQueue(calls);
+        var storage = new FakeFileConversionStorage(calls);
+        var service = new FileConversionService(repository, queue, storage);
+        await using var content = new MemoryStream(new byte[] { 1, 2, 3 });
+
+        var response = await service.CreateJobAsync(
+            new CreateFileConversionRequest("design.PSD", content.Length, ".WEBP", content),
+            CancellationToken.None);
+
+        Assert.NotNull(repository.AddedTask);
+        Assert.Equal(response.JobId, repository.AddedTask.JobId);
+        Assert.Equal("psd", repository.AddedTask.OriginalFormat);
+        Assert.Equal("webp", repository.AddedTask.ConvertedFormat);
+        Assert.Equal("psd", storage.SavedFormat);
+        Assert.Equal(["ensure", "save", "add", "queue"], calls);
+    }
+
+    [Fact]
+    public async Task GetDownloadFileAsync_CompletedAvifJob_ReturnsImageContentType()
+    {
+        var calls = new List<string>();
+        var jobId = Guid.NewGuid();
+        var task = new ConvertTask
+        {
+            JobId = jobId,
+            Job = new Job { JobId = jobId },
+            Status = JobStatuses.Completed,
+            OriginalFormat = "png",
+            ConvertedFormat = "avif",
+            DownloadUrl = $"/api/v1/convert/file/{jobId}",
+        };
+        var service = new FileConversionService(
+            new FakeConvertTaskRepository(calls, task),
+            new FakeFileConversionQueue(calls),
+            new FakeFileConversionStorage(calls) { OutputExists = true });
+
+        var file = await service.GetDownloadFileAsync(jobId, CancellationToken.None);
+
+        Assert.Equal("image/avif", file.ContentType);
+        Assert.Equal($"{jobId:N}.avif", file.FileName);
+    }
+
+    private sealed class FakeConvertTaskRepository(
+        List<string> calls,
+        ConvertTask? foundTask = null) : IConvertTaskRepository
     {
         public ConvertTask? AddedTask { get; private set; }
 
@@ -65,7 +114,7 @@ public sealed class FileConversionServiceTests
         }
 
         public Task<ConvertTask?> FindAsync(Guid jobId, CancellationToken cancellationToken) =>
-            Task.FromResult<ConvertTask?>(null);
+            Task.FromResult(foundTask);
 
         public Task<IReadOnlyList<Guid>> FindInterruptedJobIdsAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Guid>>(Array.Empty<Guid>());
@@ -92,6 +141,7 @@ public sealed class FileConversionServiceTests
     {
         public Guid? SavedJobId { get; private set; }
         public string? SavedFormat { get; private set; }
+        public bool OutputExists { get; init; }
 
         public string GetInputPath(Guid jobId, string originalFormat) =>
             Path.Combine("input", $"{jobId:N}.{originalFormat}");
@@ -111,7 +161,7 @@ public sealed class FileConversionServiceTests
             return Task.CompletedTask;
         }
 
-        public bool Exists(string path) => false;
+        public bool Exists(string path) => OutputExists;
 
         public void DeleteIfExists(string path)
         {
