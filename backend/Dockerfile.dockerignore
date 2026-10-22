@@ -4,3 +4,8 @@
 backend/**/bin/
 backend/**/obj/
 backend/**/target/
+backend/**/.venv/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/vendor/pdf-docx-converter-worker/docs/
+backend/vendor/pdf-docx-converter-worker/test/

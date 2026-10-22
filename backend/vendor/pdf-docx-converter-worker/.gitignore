@@ -1,0 +1,27 @@
+# files
+*.pyc
+*.jp*g
+layout.json
+.vscode/
+
+# pdf testing files
+*.pdf
+!demo*.pdf
+*coverage*
+
+test/issues/
+test/features/
+test/outputs/
+
+diff.png
+
+# building dir
+build/
+dist/
+*egg-info/
+pdf2docx*.rst
+
+# Utilities worker build artifacts
+.venv/
+__pycache__/
+/target/

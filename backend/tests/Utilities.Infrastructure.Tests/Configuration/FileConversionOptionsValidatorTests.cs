@@ -14,12 +14,16 @@ public sealed class FileConversionOptionsValidatorTests
         var result = _validator.Validate(null, options);
 
         Assert.True(result.Succeeded);
+        Assert.Equal(256L * 1024 * 1024, options.MaxUploadFileBytes);
+        Assert.Equal(257L * 1024 * 1024, options.MaxUploadRequestBytes);
         Assert.Equal(256L * 1024 * 1024, options.CadMaxInputBytes);
         Assert.Equal(250_000, options.CadMaxEntities);
         Assert.Equal(5_000_000, options.CadMaxVertices);
         Assert.Equal(2_000_000, options.CadMaxTriangles);
         Assert.Equal(2_000_000, options.CadMaxLineSegments);
         Assert.Equal(256L * 1024 * 1024, options.CadMaxOutputBytes);
+        Assert.Equal(128L * 1024 * 1024, options.PdfDocxMaxInputBytes);
+        Assert.Equal(256L * 1024 * 1024, options.PdfDocxMaxOutputBytes);
     }
 
     [Theory]
@@ -86,6 +90,124 @@ public sealed class FileConversionOptionsValidatorTests
 
         Assert.True(result.Failed);
         Assert.Contains("CadConverterExecutablePath", result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_MissingPdfDocxExecutablePath_Fails()
+    {
+        var options = new FileConversionOptions
+        {
+            PdfDocxConverterExecutablePath = " ",
+        };
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("PdfDocxConverterExecutablePath", result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_EmptyConfiguredPdfDocxScriptPath_Fails()
+    {
+        var options = new FileConversionOptions
+        {
+            PdfDocxConverterScriptPath = " ",
+        };
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("PdfDocxConverterScriptPath", result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(7201)]
+    public void Validate_InvalidPdfDocxTimeout_Fails(int value)
+    {
+        var options = new FileConversionOptions
+        {
+            PdfDocxConversionTimeoutSeconds = value,
+        };
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("PdfDocxConversionTimeoutSeconds", result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(nameof(FileConversionOptions.PdfDocxMaxInputBytes))]
+    [InlineData(nameof(FileConversionOptions.PdfDocxMaxOutputBytes))]
+    public void Validate_NonPositivePdfDocxByteLimit_Fails(string propertyName)
+    {
+        var options = new FileConversionOptions();
+        if (propertyName == nameof(FileConversionOptions.PdfDocxMaxInputBytes))
+        {
+            options.PdfDocxMaxInputBytes = 0;
+        }
+        else
+        {
+            options.PdfDocxMaxOutputBytes = 0;
+        }
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains(propertyName, result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(nameof(FileConversionOptions.MaxUploadFileBytes))]
+    [InlineData(nameof(FileConversionOptions.MaxUploadRequestBytes))]
+    public void Validate_NonPositiveUploadLimit_Fails(string propertyName)
+    {
+        var options = new FileConversionOptions();
+        if (propertyName == nameof(FileConversionOptions.MaxUploadFileBytes))
+        {
+            options.MaxUploadFileBytes = 0;
+        }
+        else
+        {
+            options.MaxUploadRequestBytes = 0;
+        }
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains(propertyName, result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_UploadFileLimitBelowConverterInputLimit_Fails()
+    {
+        var options = new FileConversionOptions
+        {
+            MaxUploadFileBytes = 128,
+            MaxUploadRequestBytes = 128 + FileConversionOptions.MinimumMultipartOverheadBytes,
+            CadMaxInputBytes = 129,
+            PdfDocxMaxInputBytes = 129,
+        };
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("CadMaxInputBytes", result.FailureMessage, StringComparison.Ordinal);
+        Assert.Contains("PdfDocxMaxInputBytes", result.FailureMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Validate_RequestLimitWithoutMultipartOverhead_Fails()
+    {
+        var options = new FileConversionOptions
+        {
+            MaxUploadRequestBytes = 256L * 1024 * 1024,
+        };
+
+        var result = _validator.Validate(null, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("multipart overhead", result.FailureMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

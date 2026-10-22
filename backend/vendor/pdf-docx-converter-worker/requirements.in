@@ -1,0 +1,9 @@
+# Runtime dependencies for the vendored pdf2docx v0.5.13 source tree.
+# Keep PyMuPDF on the latest verified lean 1.x line. PyMuPDF 2.x pulls in a
+# substantially larger ML/layout stack that this worker does not use.
+fire==0.7.1
+fonttools==4.67.0
+numpy==2.5.4
+opencv-python-headless==5.0.0.93
+PyMuPDF==1.28.2
+python-docx==1.2.0

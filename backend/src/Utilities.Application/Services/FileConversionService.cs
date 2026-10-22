@@ -178,6 +178,7 @@ public sealed class FileConversionService(
         "xbm" => "image/x-xbitmap",
         "xpm" => "image/x-xpixmap",
         "glb" => "model/gltf-binary",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         _ => "application/octet-stream",
     };
 }

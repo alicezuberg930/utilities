@@ -21,6 +21,7 @@ const staticRoutes = [
   '/structure',
   '/contact',
   '/news',
+  '/crop-image',
 ]
 const postCategories = ['chao-tinh-thuong', 'chuong-trinh-thuong-nien', 'ho-tro-hoan-canh', 'tiep-suc-tri-thuc']
 

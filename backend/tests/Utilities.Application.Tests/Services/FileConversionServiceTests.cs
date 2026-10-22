@@ -76,6 +76,28 @@ public sealed class FileConversionServiceTests
     }
 
     [Fact]
+    public async Task CreateJobAsync_ValidPdfRequest_NormalizesPersistsAndQueuesJob()
+    {
+        var calls = new List<string>();
+        var repository = new FakeConvertTaskRepository(calls);
+        var queue = new FakeFileConversionQueue(calls);
+        var storage = new FakeFileConversionStorage(calls);
+        var service = new FileConversionService(repository, queue, storage);
+        await using var content = new MemoryStream("%PDF-1.7"u8.ToArray());
+
+        var response = await service.CreateJobAsync(
+            new CreateFileConversionRequest("report.PDF", content.Length, ".DOCX", content),
+            CancellationToken.None);
+
+        Assert.NotNull(repository.AddedTask);
+        Assert.Equal(response.JobId, repository.AddedTask.JobId);
+        Assert.Equal("pdf", repository.AddedTask.OriginalFormat);
+        Assert.Equal("docx", repository.AddedTask.ConvertedFormat);
+        Assert.Equal("pdf", storage.SavedFormat);
+        Assert.Equal(["ensure", "save", "add", "queue"], calls);
+    }
+
+    [Fact]
     public async Task GetDownloadFileAsync_CompletedAvifJob_ReturnsImageContentType()
     {
         var calls = new List<string>();
@@ -98,6 +120,33 @@ public sealed class FileConversionServiceTests
 
         Assert.Equal("image/avif", file.ContentType);
         Assert.Equal($"{jobId:N}.avif", file.FileName);
+    }
+
+    [Fact]
+    public async Task GetDownloadFileAsync_CompletedDocxJob_ReturnsOfficeContentType()
+    {
+        var calls = new List<string>();
+        var jobId = Guid.NewGuid();
+        var task = new ConvertTask
+        {
+            JobId = jobId,
+            Job = new Job { JobId = jobId },
+            Status = JobStatuses.Completed,
+            OriginalFormat = "pdf",
+            ConvertedFormat = "docx",
+            DownloadUrl = $"/api/v1/convert/file/{jobId}",
+        };
+        var service = new FileConversionService(
+            new FakeConvertTaskRepository(calls, task),
+            new FakeFileConversionQueue(calls),
+            new FakeFileConversionStorage(calls) { OutputExists = true });
+
+        var file = await service.GetDownloadFileAsync(jobId, CancellationToken.None);
+
+        Assert.Equal(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            file.ContentType);
+        Assert.Equal($"{jobId:N}.docx", file.FileName);
     }
 
     private sealed class FakeConvertTaskRepository(

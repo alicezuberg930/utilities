@@ -11,6 +11,7 @@ public sealed class FileConversionFormatsTests
     [InlineData("mp4", "webm", true)]
     [InlineData("dwg", "glb", true)]
     [InlineData("dxf", "glb", true)]
+    [InlineData("pdf", "docx", true)]
     [InlineData("png", "webp", true)]
     [InlineData("psd", "png", true)]
     [InlineData("svg", "avif", true)]
@@ -20,6 +21,9 @@ public sealed class FileConversionFormatsTests
     [InlineData("png", "mp4", false)]
     [InlineData("mp4", "png", false)]
     [InlineData("dwg", "mp4", false)]
+    [InlineData("pdf", "pdf", false)]
+    [InlineData("pdf", "mp3", false)]
+    [InlineData("docx", "pdf", false)]
     [InlineData("DWG", "glb", false)]
     public void IsSupportedConversion_Formats_ReturnsExpectedResult(
         string originalFormat,

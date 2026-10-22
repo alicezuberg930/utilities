@@ -192,6 +192,16 @@ public static class FileConversionFormats
         "glb",
     };
 
+    public static readonly IReadOnlySet<string> DocumentInputs = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "pdf",
+    };
+
+    public static readonly IReadOnlySet<string> DocumentOutputs = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "docx",
+    };
+
     public static bool IsMediaConversion(string originalFormat, string convertedFormat) => originalFormat != convertedFormat && (AudioInputs.Contains(originalFormat)
         ? AudioOutputs.Contains(convertedFormat)
         : VideoInputs.Contains(originalFormat) && (AudioOutputs.Contains(convertedFormat) || VideoOutputs.Contains(convertedFormat)));
@@ -207,19 +217,25 @@ public static class FileConversionFormats
 
     public static bool IsCadConversion(string originalFormat, string convertedFormat) => CadInputs.Contains(originalFormat) && CadOutputs.Contains(convertedFormat);
 
+    public static bool IsDocumentConversion(string originalFormat, string convertedFormat) =>
+        DocumentInputs.Contains(originalFormat) && DocumentOutputs.Contains(convertedFormat);
+
     public static bool IsSupportedInput(string format) =>
         AudioInputs.Contains(format) ||
         VideoInputs.Contains(format) ||
         ImageInputs.Contains(format) ||
-        CadInputs.Contains(format);
+        CadInputs.Contains(format) ||
+        DocumentInputs.Contains(format);
 
     public static bool IsSupportedOutput(string format) =>
         AudioOutputs.Contains(format) ||
         VideoOutputs.Contains(format) ||
         ImageOutputs.Contains(format) ||
-        CadOutputs.Contains(format);
+        CadOutputs.Contains(format) ||
+        DocumentOutputs.Contains(format);
 
     public static bool IsSupportedConversion(string originalFormat, string convertedFormat) =>
         IsFfmpegConversion(originalFormat, convertedFormat) ||
-        IsCadConversion(originalFormat, convertedFormat);
+        IsCadConversion(originalFormat, convertedFormat) ||
+        IsDocumentConversion(originalFormat, convertedFormat);
 }

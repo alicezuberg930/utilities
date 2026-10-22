@@ -9,6 +9,22 @@ COPY backend/vendor/cad-converter-worker/src/ ./src/
 # Compile the worker as a locked, optimized release binary.
 RUN cargo build --release --locked
 
+# Install and test the Python PDF-to-DOCX worker in an isolated stage.
+FROM python:3.12-slim-bookworm AS pdf-docx-build
+WORKDIR /opt/utilities-pdf-docx-converter
+
+COPY backend/vendor/pdf-docx-converter-worker/requirements.lock ./
+RUN python -m pip install \
+    --disable-pip-version-check \
+    --no-cache-dir \
+    --require-hashes \
+    --requirement requirements.lock
+
+COPY backend/vendor/pdf-docx-converter-worker/worker.py ./
+COPY backend/vendor/pdf-docx-converter-worker/pdf2docx/ ./pdf2docx/
+COPY backend/vendor/pdf-docx-converter-worker/tests/ ./tests/
+RUN python -m unittest discover -s tests -p 'test_*.py'
+
 # Restore and publish the ASP.NET Core API in a separate SDK stage.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -36,7 +52,7 @@ ARG YT_DLP_SHA256=1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4
 
 # Install media dependencies, yt-dlp, and writable job directories, then clear package metadata.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg python3 \
+    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg libgomp1 \
     && curl --fail --location "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" --output /usr/local/bin/yt-dlp \
     && echo "${YT_DLP_SHA256}  /usr/local/bin/yt-dlp" | sha256sum --check \
     && chmod 0755 /usr/local/bin/yt-dlp \
@@ -44,13 +60,20 @@ RUN apt-get update \
     && chown -R "${APP_UID}:${APP_UID}" /tmp/jobs /tmp/convert-jobs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the published API, CAD worker, and worker license documentation.
+# Install the published API, conversion workers, and worker license documentation.
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=pdf-docx-build /usr/local /usr/local
 COPY --from=cad-build /src/backend/vendor/cad-converter-worker/target/release/utilities-cad-converter /usr/local/bin/utilities-cad-converter
 COPY --from=cad-build /src/backend/vendor/cad-converter-worker/LICENSE /usr/share/doc/utilities-cad-converter/LICENSE
 COPY --from=cad-build /src/backend/vendor/cad-converter-worker/THIRD_PARTY_NOTICES.md /usr/share/doc/utilities-cad-converter/THIRD_PARTY_NOTICES.md
 COPY --from=cad-build /src/backend/vendor/cad-converter-worker/THIRD_PARTY_LICENSES.txt /usr/share/doc/utilities-cad-converter/THIRD_PARTY_LICENSES.txt
+COPY --from=pdf-docx-build /opt/utilities-pdf-docx-converter/worker.py /opt/utilities-pdf-docx-converter/worker.py
+COPY --from=pdf-docx-build /opt/utilities-pdf-docx-converter/pdf2docx /opt/utilities-pdf-docx-converter/pdf2docx
+COPY backend/vendor/pdf-docx-converter-worker/LICENSE /usr/share/doc/utilities-pdf-docx-converter/LICENSE
+COPY backend/vendor/pdf-docx-converter-worker/LICENSE.PyMuPDF-AGPL-3.0.txt /usr/share/doc/utilities-pdf-docx-converter/LICENSE.PyMuPDF-AGPL-3.0.txt
+COPY backend/vendor/pdf-docx-converter-worker/THIRD_PARTY_NOTICES.md /usr/share/doc/utilities-pdf-docx-converter/THIRD_PARTY_NOTICES.md
+COPY backend/vendor/pdf-docx-converter-worker/THIRD_PARTY_LICENSES.txt /usr/share/doc/utilities-pdf-docx-converter/THIRD_PARTY_LICENSES.txt
 
 # Configure service ports, converter executables, and temporary job storage.
 ENV ASPNETCORE_HTTP_PORTS=8080
@@ -58,7 +81,11 @@ ENV Youtube__ExecutablePath=/usr/local/bin/yt-dlp
 ENV Youtube__JobsDirectory=/tmp/jobs
 ENV FileConversion__FfmpegExecutablePath=/usr/bin/ffmpeg
 ENV FileConversion__FfprobeExecutablePath=/usr/bin/ffprobe
+ENV FileConversion__MaxUploadFileBytes=268435456
+ENV FileConversion__MaxUploadRequestBytes=269484032
 ENV FileConversion__CadConverterExecutablePath=/usr/local/bin/utilities-cad-converter
+ENV FileConversion__PdfDocxConverterExecutablePath=/usr/local/bin/python3
+ENV FileConversion__PdfDocxConverterScriptPath=/opt/utilities-pdf-docx-converter/worker.py
 ENV FileConversion__JobsDirectory=/tmp/convert-jobs
 
 # Run the application as the non-root user supplied by the .NET runtime image.

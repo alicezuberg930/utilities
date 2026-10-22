@@ -1,11 +1,14 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Utilities.Api.Filters;
 using Utilities.Application.DTOs.Requests;
 using Utilities.Application.DTOs.Responses;
 using Utilities.Application.Exceptions;
 using Utilities.Application.Interfaces;
+using Utilities.Domain.Constants;
+using Utilities.Infrastructure.Configuration;
 
 namespace Utilities.Api.Controllers.V1;
 
@@ -13,12 +16,15 @@ namespace Utilities.Api.Controllers.V1;
 [Route("api/v1/convert")]
 public sealed class FileConversionController(
     IFileConversion fileConversion,
-    IFileProgressStream progressStream) : ControllerBase
+    IFileProgressStream progressStream,
+    IOptions<FileConversionOptions> options) : ControllerBase
 {
     private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly FileConversionOptions _options = options.Value;
 
     [HttpPost("job")]
     [Consumes("multipart/form-data")]
+    [FileConversionUploadLimits]
     [ResponseEnvelope(StatusCodes.Status201Created, "Conversion job created successfully")]
     public async Task<FileConversionJobResponse> CreateJobAsync(
         [FromForm] IFormFile? file,
@@ -30,6 +36,12 @@ public sealed class FileConversionController(
             throw new RequestValidationException("A source file is required.");
         }
 
+        if (file.Length > GetMaximumInputBytes(file.FileName))
+        {
+            throw new RequestValidationException(
+                "The source file exceeds the configured upload size limit.");
+        }
+
         await using var content = file.OpenReadStream();
         return await fileConversion.CreateJobAsync(
             new CreateFileConversionRequest(
@@ -38,6 +50,25 @@ public sealed class FileConversionController(
                 convertedFormat,
                 content),
             cancellationToken);
+    }
+
+    private long GetMaximumInputBytes(string fileName)
+    {
+        var extension = Path.GetExtension(Path.GetFileName(fileName))
+            .TrimStart('.')
+            .ToLowerInvariant();
+
+        if (FileConversionFormats.CadInputs.Contains(extension))
+        {
+            return _options.CadMaxInputBytes;
+        }
+
+        if (FileConversionFormats.DocumentInputs.Contains(extension))
+        {
+            return _options.PdfDocxMaxInputBytes;
+        }
+
+        return _options.MaxUploadFileBytes;
     }
 
     [HttpGet("progress/{jobId:guid}")]

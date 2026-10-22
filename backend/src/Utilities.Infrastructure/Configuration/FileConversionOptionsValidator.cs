@@ -9,6 +9,16 @@ public sealed class FileConversionOptionsValidator : IValidateOptions<FileConver
         ArgumentNullException.ThrowIfNull(options);
 
         var failures = new List<string>();
+        if (options.MaxUploadFileBytes <= 0)
+        {
+            failures.Add("FileConversion:MaxUploadFileBytes must be a positive number.");
+        }
+
+        if (options.MaxUploadRequestBytes <= 0)
+        {
+            failures.Add("FileConversion:MaxUploadRequestBytes must be a positive number.");
+        }
+
         if (string.IsNullOrWhiteSpace(options.CadConverterExecutablePath))
         {
             failures.Add("FileConversion:CadConverterExecutablePath is required.");
@@ -42,6 +52,50 @@ public sealed class FileConversionOptionsValidator : IValidateOptions<FileConver
         if (options.CadMaxOutputBytes is <= 0 or > uint.MaxValue)
         {
             failures.Add($"FileConversion:CadMaxOutputBytes must be between 1 and {uint.MaxValue}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.PdfDocxConverterExecutablePath))
+        {
+            failures.Add("FileConversion:PdfDocxConverterExecutablePath is required.");
+        }
+
+        if (options.PdfDocxConverterScriptPath is not null &&
+            string.IsNullOrWhiteSpace(options.PdfDocxConverterScriptPath))
+        {
+            failures.Add("FileConversion:PdfDocxConverterScriptPath cannot be empty when configured.");
+        }
+
+        if (options.PdfDocxConversionTimeoutSeconds is < 1 or > 7_200)
+        {
+            failures.Add("FileConversion:PdfDocxConversionTimeoutSeconds must be between 1 and 7200.");
+        }
+
+        if (options.PdfDocxMaxInputBytes <= 0)
+        {
+            failures.Add("FileConversion:PdfDocxMaxInputBytes must be a positive number.");
+        }
+
+        if (options.PdfDocxMaxOutputBytes <= 0)
+        {
+            failures.Add("FileConversion:PdfDocxMaxOutputBytes must be a positive number.");
+        }
+
+        if (options.MaxUploadFileBytes > 0 && options.CadMaxInputBytes > options.MaxUploadFileBytes)
+        {
+            failures.Add("FileConversion:MaxUploadFileBytes must be greater than or equal to FileConversion:CadMaxInputBytes.");
+        }
+
+        if (options.MaxUploadFileBytes > 0 && options.PdfDocxMaxInputBytes > options.MaxUploadFileBytes)
+        {
+            failures.Add("FileConversion:MaxUploadFileBytes must be greater than or equal to FileConversion:PdfDocxMaxInputBytes.");
+        }
+
+        if (options.MaxUploadFileBytes > 0 &&
+            (options.MaxUploadRequestBytes <= FileConversionOptions.MinimumMultipartOverheadBytes ||
+             options.MaxUploadFileBytes >
+             options.MaxUploadRequestBytes - FileConversionOptions.MinimumMultipartOverheadBytes))
+        {
+            failures.Add($"FileConversion:MaxUploadRequestBytes must allow at least {FileConversionOptions.MinimumMultipartOverheadBytes} bytes of multipart overhead beyond FileConversion:MaxUploadFileBytes.");
         }
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);

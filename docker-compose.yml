@@ -15,7 +15,11 @@ services:
       Youtube__JobsDirectory: /tmp/jobs
       FileConversion__FfmpegExecutablePath: /usr/bin/ffmpeg
       FileConversion__FfprobeExecutablePath: /usr/bin/ffprobe
+      FileConversion__MaxUploadFileBytes: 268435456
+      FileConversion__MaxUploadRequestBytes: 269484032
       FileConversion__CadConverterExecutablePath: /usr/local/bin/utilities-cad-converter
+      FileConversion__PdfDocxConverterExecutablePath: /usr/local/bin/python3
+      FileConversion__PdfDocxConverterScriptPath: /opt/utilities-pdf-docx-converter/worker.py
       FileConversion__JobsDirectory: /tmp/convert-jobs
       FileConversion__CadMaxEntities: 500000
       FileConversion__CadMaxVertices: 8000000

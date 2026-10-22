@@ -41,6 +41,7 @@ import { z } from 'zod'
 const AUDIO_INPUTS = new Set(['aac', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wav', 'wma'])
 const VIDEO_INPUTS = new Set(['avi', 'flv', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'webm', 'wmv'])
 const CAD_INPUTS = new Set(['dwg', 'dxf', 'dws', 'dwt'])
+const DOCUMENT_INPUTS = new Set(['pdf'])
 const AUDIO_OUTPUTS: FileConversionFormat[] = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus']
 const VIDEO_OUTPUTS: FileConversionFormat[] = ['mp4', 'webm', 'mov', 'mkv', 'avi']
 const IMAGE_OUTPUTS: FileConversionFormat[] = [
@@ -57,11 +58,13 @@ const IMAGE_INPUTS = new Set([
   'svg', 'svgz', 'timg', 'ximg', 'xpm',
 ])
 const CAD_OUTPUTS: FileConversionFormat[] = ['glb']
-const ALL_OUTPUTS = [...AUDIO_OUTPUTS, ...VIDEO_OUTPUTS, ...IMAGE_OUTPUTS, ...CAD_OUTPUTS]
+const DOCUMENT_OUTPUTS: FileConversionFormat[] = ['docx']
+const ALL_OUTPUTS = [...AUDIO_OUTPUTS, ...VIDEO_OUTPUTS, ...IMAGE_OUTPUTS, ...CAD_OUTPUTS, ...DOCUMENT_OUTPUTS]
 const FILE_ACCEPT = {
   'audio/*': [...AUDIO_INPUTS].map(format => `.${format}`),
   'video/*': [...VIDEO_INPUTS].map(format => `.${format}`),
   'image/*': [...IMAGE_INPUTS].map(format => `.${format}`),
+  'application/pdf': ['.pdf'],
   'application/octet-stream': [...CAD_INPUTS].map(format => `.${format}`),
   'image/vnd.dwg': ['.dwg'],
   'image/vnd.dxf': ['.dxf'],
@@ -83,6 +86,7 @@ const isSupportedSource = (value: unknown): value is CustomFile => {
     || VIDEO_INPUTS.has(extension)
     || IMAGE_INPUTS.has(extension)
     || CAD_INPUTS.has(extension)
+    || DOCUMENT_INPUTS.has(extension)
 }
 
 const getValidOutputs = (sourceFormat: string): FileConversionFormat[] => {
@@ -90,12 +94,13 @@ const getValidOutputs = (sourceFormat: string): FileConversionFormat[] => {
   if (VIDEO_INPUTS.has(sourceFormat)) return [...VIDEO_OUTPUTS, ...AUDIO_OUTPUTS]
   if (IMAGE_INPUTS.has(sourceFormat)) return IMAGE_OUTPUTS
   if (CAD_INPUTS.has(sourceFormat)) return CAD_OUTPUTS
+  if (DOCUMENT_INPUTS.has(sourceFormat)) return DOCUMENT_OUTPUTS
   return []
 }
 
 const fileConversionSchema = z.object({
   file: z.custom<CustomFile | null>(isSupportedSource, {
-    message: 'Select a supported audio, video, image, or AutoCAD drawing file.',
+    message: 'Select a supported audio, video, image, PDF, or AutoCAD drawing file.',
   }),
   convertedFormat: z.custom<FileConversionFormat | ''>(
     value => typeof value === 'string' && ALL_OUTPUTS.includes(value as FileConversionFormat),
@@ -158,11 +163,11 @@ const UploadPlaceholder = () => (
       <UploadCloudIcon className='size-7 text-muted-foreground' />
     </div>
     <div className='space-y-1'>
-      <p className='font-medium'>Drag and drop an audio, video, image, or AutoCAD drawing file</p>
+      <p className='font-medium'>Drag and drop an audio, video, image, PDF, or AutoCAD drawing file</p>
       <p className='text-sm text-muted-foreground'>or click to browse from your device</p>
     </div>
     <div className='flex max-w-2xl flex-wrap justify-center gap-1.5'>
-      {['MP3', 'MP4', 'PNG', 'JPG', 'WEBP', 'DWG', 'GLB'].map(format => (
+      {['MP3', 'MP4', 'PNG', 'JPG', 'PDF', 'DOCX', 'DWG', 'GLB'].map(format => (
         <Badge key={format} variant='outline'>{format}</Badge>
       ))}
     </div>
@@ -190,6 +195,7 @@ export default function FileConversion() {
   const sourceIsVideo = VIDEO_INPUTS.has(sourceFormat)
   const sourceIsImage = IMAGE_INPUTS.has(sourceFormat)
   const sourceIsCad = CAD_INPUTS.has(sourceFormat)
+  const sourceIsDocument = DOCUMENT_INPUTS.has(sourceFormat)
   const isBusy = status === 'uploading' || status === 'converting'
 
   const outputFormats = useMemo(() => {
@@ -229,7 +235,7 @@ export default function FileConversion() {
       if (fileRejections.length > 0) {
         form.setError('file', {
           type: 'file-invalid-type',
-          message: 'That file type is not supported. Choose a supported audio, video, image, or AutoCAD drawing file.',
+          message: 'That file type is not supported. Choose a supported audio, video, image, PDF, or AutoCAD drawing file.',
         })
       }
       return
@@ -324,7 +330,7 @@ export default function FileConversion() {
         <CardHeader>
           <CardTitle className='text-xl'>File converter</CardTitle>
           <CardDescription>
-            Convert audio, video, and image files, or turn DWG, DXF, DWT, and DWS drawings into GLB models.
+            Convert audio, video, and image files, turn PDF documents into editable DOCX files, or create GLB models from AutoCAD drawings.
           </CardDescription>
         </CardHeader>
 
@@ -396,7 +402,15 @@ export default function FileConversion() {
                                 ))}
                               </SelectGroup>
                             )}
-                            {!sourceIsCad && !sourceIsImage && (
+                            {sourceIsDocument && (
+                              <SelectGroup>
+                                <SelectLabel>Word document</SelectLabel>
+                                {outputFormats.filter(format => DOCUMENT_OUTPUTS.includes(format)).map(format => (
+                                  <SelectItem key={format} value={format}>{format.toUpperCase()}</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                            {!sourceIsCad && !sourceIsImage && !sourceIsDocument && (
                               <SelectGroup>
                                 <SelectLabel>{sourceIsVideo ? 'Audio' : 'Audio formats'}</SelectLabel>
                                 {outputFormats.filter(format => AUDIO_OUTPUTS.includes(format)).map(format => (

@@ -7,6 +7,7 @@ export type FileConversionFormat =
   | 'avif'
   | 'bmp'
   | 'dpx'
+  | 'docx'
   | 'exr'
   | 'fits'
   | 'flac'

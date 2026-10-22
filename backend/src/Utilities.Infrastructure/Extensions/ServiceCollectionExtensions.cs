@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
                 options.CadConverterExecutablePath = ResolveCadConverterExecutablePath(
                     options.CadConverterExecutablePath,
                     environment.ContentRootPath);
+                ResolvePdfDocxConverter(options, environment.ContentRootPath);
                 if (!Path.IsPathFullyQualified(options.JobsDirectory))
                 {
                     options.JobsDirectory = Path.GetFullPath(
@@ -80,8 +81,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<YoutubeDownloader>();
         services.AddSingleton<ICadConverterProcess, CadConverterProcess>();
+        services.AddSingleton<IPdfDocxConverterProcess, PdfDocxConverterProcess>();
         services.AddSingleton<IFileConversionEngine, MediaFileConversionEngine>();
         services.AddSingleton<IFileConversionEngine, CadFileConversionEngine>();
+        services.AddSingleton<IFileConversionEngine, PdfDocxFileConversionEngine>();
         services.AddSingleton<FileConversionDispatcher>();
         services.AddHostedService<YoutubeDownloadWorker>();
         services.AddHostedService<FileConversionWorker>();
@@ -124,5 +127,57 @@ public static class ServiceCollectionExtensions
             defaultCommandName));
 
         return File.Exists(localWorkerPath) ? localWorkerPath : resolvedPath;
+    }
+
+    private static void ResolvePdfDocxConverter(
+        FileConversionOptions options,
+        string contentRootPath)
+    {
+        options.PdfDocxConverterExecutablePath = ResolveExecutablePath(
+            options.PdfDocxConverterExecutablePath,
+            contentRootPath);
+        if (options.PdfDocxConverterScriptPath is not null &&
+            !string.IsNullOrWhiteSpace(options.PdfDocxConverterScriptPath))
+        {
+            options.PdfDocxConverterScriptPath = Path.IsPathFullyQualified(
+                options.PdfDocxConverterScriptPath)
+                ? options.PdfDocxConverterScriptPath
+                : Path.GetFullPath(Path.Combine(
+                    contentRootPath,
+                    options.PdfDocxConverterScriptPath));
+        }
+
+        var defaultCommandName = OperatingSystem.IsWindows()
+            ? "utilities-pdf-docx-converter.exe"
+            : "utilities-pdf-docx-converter";
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!string.Equals(
+                options.PdfDocxConverterExecutablePath,
+                defaultCommandName,
+                comparison) ||
+            options.PdfDocxConverterScriptPath is not null)
+        {
+            return;
+        }
+
+        var localWorkerRoot = Path.GetFullPath(Path.Combine(
+            contentRootPath,
+            "..",
+            "..",
+            "vendor",
+            "pdf-docx-converter-worker"));
+        var localWorkerScript = Path.Combine(localWorkerRoot, "worker.py");
+        var localPython = OperatingSystem.IsWindows()
+            ? Path.Combine(localWorkerRoot, ".venv", "Scripts", "python.exe")
+            : Path.Combine(localWorkerRoot, ".venv", "bin", "python");
+
+        if (File.Exists(localPython) && File.Exists(localWorkerScript))
+        {
+            options.PdfDocxConverterExecutablePath = localPython;
+            options.PdfDocxConverterScriptPath = localWorkerScript;
+        }
     }
 }
