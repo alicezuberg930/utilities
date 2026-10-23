@@ -20,6 +20,7 @@ export const ROUTES = {
   contact: path(ROOT_HOME, 'contact'),
   news: path(ROOT_HOME, 'news'),
   cropImage: path(ROOT_HOME, 'crop-image'),
+  imageCompression: path(ROOT_HOME, 'image-compression'),
   chaoTinhThuongDetails: (slug: string) => path(ROOT_HOME, `chao-tinh-thuong/${slug}`),
   chuongTrinhThuongNienDetails: (slug: string) => path(ROOT_HOME, `chuong-trinh-thuong-nien/${slug}`),
   hoTroHoanCanhDetails: (slug: string) => path(ROOT_HOME, `ho-tro-hoan-canh/${slug}`),

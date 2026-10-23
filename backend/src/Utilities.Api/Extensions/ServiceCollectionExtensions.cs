@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IYoutubeService, YoutubeService>();
         services.AddScoped<IFileConversion, FileConversionService>();
+        services.AddScoped<IImageCompression, ImageCompressionService>();
         services.AddExceptionHandler<ApiExceptionHandler>();
         services.AddProblemDetails();
 

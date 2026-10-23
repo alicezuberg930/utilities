@@ -22,6 +22,71 @@ namespace Utilities.Infrastructure.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Utilities.Domain.Entities.CompressionTask", b =>
+                {
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("job_id");
+
+                    b.Property<long?>("CompressedSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("compressed_size_bytes");
+
+                    b.Property<string>("DownloadUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("download_url");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<string>("OriginalFormat")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("original_format");
+
+                    b.Property<long>("OriginalSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("original_size_bytes");
+
+                    b.Property<string>("OutputFormat")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("output_format");
+
+                    b.Property<int>("Quality")
+                        .HasColumnType("integer")
+                        .HasColumnName("quality");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.HasKey("JobId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_compression_tasks_status");
+
+                    b.ToTable("compression_tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_compression_tasks_compressed_size", "compressed_size_bytes IS NULL OR compressed_size_bytes >= 0");
+
+                            t.HasCheckConstraint("ck_compression_tasks_original_size", "original_size_bytes > 0");
+
+                            t.HasCheckConstraint("ck_compression_tasks_quality", "quality >= 1 AND quality <= 100");
+
+                            t.HasCheckConstraint("ck_compression_tasks_status", "status IN ('pending', 'running', 'completed', 'failed')");
+                        });
+                });
+
             modelBuilder.Entity("Utilities.Domain.Entities.ConvertTask", b =>
                 {
                     b.Property<Guid>("JobId")
@@ -145,6 +210,17 @@ namespace Utilities.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Utilities.Domain.Entities.CompressionTask", b =>
+                {
+                    b.HasOne("Utilities.Domain.Entities.Job", "Job")
+                        .WithOne("CompressionTask")
+                        .HasForeignKey("Utilities.Domain.Entities.CompressionTask", "JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
             modelBuilder.Entity("Utilities.Domain.Entities.ConvertTask", b =>
                 {
                     b.HasOne("Utilities.Domain.Entities.Job", "Job")
@@ -169,6 +245,8 @@ namespace Utilities.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Utilities.Domain.Entities.Job", b =>
                 {
+                    b.Navigation("CompressionTask");
+
                     b.Navigation("ConvertTask");
 
                     b.Navigation("YoutubeTask");

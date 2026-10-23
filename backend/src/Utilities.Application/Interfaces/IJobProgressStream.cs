@@ -15,6 +15,10 @@ public interface IFileProgressStream : IJobProgressStream
 {
 }
 
+public interface IImageCompressionProgressStream : IJobProgressStream
+{
+}
+
 public interface IJobProgressSubscription : IDisposable
 {
     IAsyncEnumerable<JobProgressEvent> ReadAllAsync(CancellationToken cancellationToken);

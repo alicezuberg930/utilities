@@ -15,6 +15,7 @@ const BannersPage = lazy(() => import('@/pages/admin/banners'))
 const EventsPage = lazy(() => import('@/pages/admin/events'))
 const InformationPage = lazy(() => import('@/pages/admin/information'))
 const CropImagePage = lazy(() => import('@/pages/public/crop-image'))
+const ImageCompressionPage = lazy(() => import('@/pages/public/image-compression'))
 
 const lazyRoute = (Component: ComponentType) => () => (
     <Suspense fallback={<ShimmerList />}>
@@ -68,6 +69,7 @@ const publicChildRoutes = [
     createRoute({ getParentRoute: () => publicRoute, path: 'contact', component: ContactPage }),
     createRoute({ getParentRoute: () => publicRoute, path: 'news', component: NewsPage }),
     createRoute({ getParentRoute: () => publicRoute, path: 'crop-image', component: lazyRoute(CropImagePage) }),
+    createRoute({ getParentRoute: () => publicRoute, path: 'image-compression', component: lazyRoute(ImageCompressionPage) }),
     createRoute({ getParentRoute: () => publicRoute, path: 'chao-tinh-thuong/$slug', component: ActivityDetailsPage }),
     createRoute({ getParentRoute: () => publicRoute, path: 'ho-tro-hoan-canh/$slug', component: ActivityDetailsPage }),
     createRoute({ getParentRoute: () => publicRoute, path: 'tiep-suc-tri-thuc/$slug', component: ActivityDetailsPage }),

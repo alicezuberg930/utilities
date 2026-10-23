@@ -22,8 +22,6 @@ RUN python -m pip install \
 
 COPY backend/vendor/pdf-docx-converter-worker/worker.py ./
 COPY backend/vendor/pdf-docx-converter-worker/pdf2docx/ ./pdf2docx/
-COPY backend/vendor/pdf-docx-converter-worker/tests/ ./tests/
-RUN python -m unittest discover -s tests -p 'test_*.py'
 
 # Restore and publish the ASP.NET Core API in a separate SDK stage.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build

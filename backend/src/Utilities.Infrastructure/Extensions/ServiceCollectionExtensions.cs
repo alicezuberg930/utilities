@@ -7,6 +7,7 @@ using Utilities.Application.Interfaces;
 using Utilities.Infrastructure.BackgroundServices;
 using Utilities.Infrastructure.Configuration;
 using Utilities.Infrastructure.Data.Context;
+using Utilities.Infrastructure.External.Compression;
 using Utilities.Infrastructure.External.Conversion;
 using Utilities.Infrastructure.External.Youtube;
 using Utilities.Infrastructure.Messaging;
@@ -65,18 +66,25 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IYoutubeTaskRepository, YoutubeTaskRepository>();
         services.AddScoped<IConvertTaskRepository, ConvertTaskRepository>();
+        services.AddScoped<ICompressionTaskRepository, CompressionTaskRepository>();
         services.AddScoped<IYoutubeMetadataProvider, YoutubeMetadataProvider>();
         services.AddSingleton<IYoutubeFileStorage, YoutubeFileStorage>();
         services.AddSingleton<IFileConversionStorage, FileConversionStorage>();
+        services.AddSingleton<IImageCompressionStorage, ImageCompressionStorage>();
 
         services.AddSingleton<YoutubeDownloadQueue>();
         services.AddSingleton<IYoutubeDownloadQueue>(provider => provider.GetRequiredService<YoutubeDownloadQueue>());
         services.AddSingleton<FileConversionQueue>();
         services.AddSingleton<IFileConversionQueue>(provider => provider.GetRequiredService<FileConversionQueue>());
+        services.AddSingleton<ImageCompressionQueue>();
+        services.AddSingleton<IImageCompressionQueue>(provider =>
+            provider.GetRequiredService<ImageCompressionQueue>());
 
         services.AddSingleton<JobProgressBroker>();
         services.AddSingleton<IYoutubeProgressStream>(provider => provider.GetRequiredService<JobProgressBroker>());
         services.AddSingleton<IFileProgressStream>(provider => provider.GetRequiredService<JobProgressBroker>());
+        services.AddSingleton<IImageCompressionProgressStream>(provider =>
+            provider.GetRequiredService<JobProgressBroker>());
         services.AddSingleton<IJobProgressPublisher>(provider => provider.GetRequiredService<JobProgressBroker>());
 
         services.AddSingleton<YoutubeDownloader>();
@@ -86,8 +94,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFileConversionEngine, CadFileConversionEngine>();
         services.AddSingleton<IFileConversionEngine, PdfDocxFileConversionEngine>();
         services.AddSingleton<FileConversionDispatcher>();
+        services.AddSingleton<IImageCompressionEngine, SkiaSharpCompressionEngine>();
         services.AddHostedService<YoutubeDownloadWorker>();
         services.AddHostedService<FileConversionWorker>();
+        services.AddHostedService<ImageCompressionWorker>();
 
         return services;
     }

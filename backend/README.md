@@ -72,6 +72,9 @@ docker compose up -d postgres
 dotnet run --project backend/src/Utilities.Api/Utilities.Api.csproj
 ```
 
+Image compression uses SkiaSharp. No image-library license key is required for
+local or Docker builds.
+
 The Development configuration resolves the CAD worker from
 `backend/vendor/cad-converter-worker/target/release` and the PDF-to-DOCX worker
 from `backend/vendor/pdf-docx-converter-worker/.venv` plus `worker.py`.
@@ -134,6 +137,23 @@ Example job request:
   "videoQuality": "720p"
 }
 ```
+
+## Image compression API
+
+Image compression is stored as a job plus a one-to-one `compression_tasks`
+record. The background worker uses SkiaSharp and reports progress over SSE.
+Quality must be an integer from 1 through 100. Images keep their original format
+by default, and JPEG or PNG can optionally be converted to WebP. Preserved PNGs
+use lossless PNG filtering and zlib compression; their quality value controls
+compression effort rather than visual quality.
+
+- `POST /api/v1/image-compression/job` with form fields `file`, `quality`, and
+  optional `convertToWebp` (defaults to `false`)
+- `GET /api/v1/image-compression/progress/{jobId}` (server-sent events)
+- `GET /api/v1/image-compression/file/{jobId}`
+
+JPEG, PNG, and WebP inputs up to 20 MiB are accepted. Images above 100 million
+pixels are rejected by the worker before decoding to bound memory use.
 
 ## File conversion API
 

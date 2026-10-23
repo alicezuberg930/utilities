@@ -10,4 +10,5 @@ public sealed class Job
 
     public YoutubeTask? YoutubeTask { get; set; }
     public ConvertTask? ConvertTask { get; set; }
+    public CompressionTask? CompressionTask { get; set; }
 }

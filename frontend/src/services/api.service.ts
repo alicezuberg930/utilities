@@ -24,6 +24,7 @@ import type {
 } from '@/@types/event'
 import type { UploadFileParams, UploadFileResponse } from '@/@types/file'
 import type { FileConversionFormat, FileConversionJobResponse } from '@/@types/file-conversion'
+import type { ImageCompressionJobResponse } from '@/@types/image-compression'
 import type {
     CreateYoutubeJobRequest,
     YoutubeJobResponse,
@@ -116,3 +117,23 @@ export const getFileConversionProgressUrl = (jobId: string) =>
 
 export const getConvertedFileUrl = (jobId: string) =>
     getApiUrl(API.CONVERT.FILE(jobId))
+
+// image compression
+export const createImageCompressionJob = async (
+    file: File,
+    quality: number,
+    convertToWebp: boolean
+) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('quality', String(quality))
+    formData.append('convertToWebp', String(convertToWebp))
+
+    return httpClient.post<ImageCompressionJobResponse>(API.IMAGE_COMPRESSION.JOB, formData)
+}
+
+export const getImageCompressionProgressUrl = (jobId: string) =>
+    getApiUrl(API.IMAGE_COMPRESSION.PROGRESS(jobId))
+
+export const getCompressedImageUrl = (jobId: string) =>
+    getApiUrl(API.IMAGE_COMPRESSION.FILE(jobId))

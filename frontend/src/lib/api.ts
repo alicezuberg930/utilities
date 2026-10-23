@@ -22,4 +22,9 @@ export const API = {
         PROGRESS: (jobId: string) => `/convert/progress/${jobId}`,
         FILE: (jobId: string) => `/convert/file/${jobId}`,
     },
+    IMAGE_COMPRESSION: {
+        JOB: "/image-compression/job",
+        PROGRESS: (jobId: string) => `/image-compression/progress/${jobId}`,
+        FILE: (jobId: string) => `/image-compression/file/${jobId}`,
+    },
 }

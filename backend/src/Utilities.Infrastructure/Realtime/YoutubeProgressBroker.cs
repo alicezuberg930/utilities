@@ -5,7 +5,11 @@ using Utilities.Application.Interfaces;
 
 namespace Utilities.Infrastructure.Realtime;
 
-public sealed class JobProgressBroker : IYoutubeProgressStream, IFileProgressStream, IJobProgressPublisher
+public sealed class JobProgressBroker :
+    IYoutubeProgressStream,
+    IFileProgressStream,
+    IImageCompressionProgressStream,
+    IJobProgressPublisher
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Channel<JobProgressEvent>>> _subscribers = new();
 
